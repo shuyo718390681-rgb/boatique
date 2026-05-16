@@ -1,6 +1,5 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import BookingForm from '../components/BookingForm';
 import Hero from '../components/Hero';
 import { BRANDS, EVENTS } from '../constants';
 import InteractiveMap from '../components/InteractiveMap';
@@ -237,8 +236,6 @@ const Home: React.FC<HomeProps> = ({ setPage, onBrandClick }) => {
         </div>
       </section>
 
-      {/* 预约表单 */}
-      <BookingForm />
     </div>
   );
 };
