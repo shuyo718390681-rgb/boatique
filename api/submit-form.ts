@@ -1,15 +1,15 @@
 import nodemailer from 'nodemailer';
 
-// 临时内存存储（用于同步辅助）
+// In-memory storage (Note: Vercel functions are stateless, so this only works for the current instance)
+// For a real app, you'd use a database like Firebase
 let submissions: any[] = [];
 
 export default async function handler(req: any, res: any) {
-  // 处理 GET 请求
+  // Handle GET request for sync tool
   if (req.method === 'GET') {
     return res.status(200).json(submissions);
   }
 
-  // 仅允许 POST 请求提交表单
   if (req.method !== 'POST') {
     return res.status(405).json({ success: false, message: 'Method Not Allowed' });
   }
@@ -24,7 +24,7 @@ export default async function handler(req: any, res: any) {
     });
   }
 
-  // 使用北京时间记录提交时间
+  // Use Beijing time for timestamp
   const timestamp = new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
   const submissionId = Date.now();
 
@@ -35,29 +35,26 @@ export default async function handler(req: any, res: any) {
     timestamp
   };
 
-  // 添加到临时缓存
+  // Add to local list (temporary storage for sync task)
   submissions.push(submissionData);
 
   try {
-    // 邮件发送服务配置
     const smtpConfig = {
       host: process.env.SMTP_HOST || "smtp.qq.com",
       port: parseInt(process.env.SMTP_PORT || "465"),
       secure: true,
       auth: {
-        user: process.env.SMTP_USER, // 您的发送邮箱，例如 718390681@qq.com
-        pass: process.env.SMTP_PASS, // 您的邮箱 SMTP 授权码（非 QQ 登录密码）
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
       },
     };
 
     const transporter = nodemailer.createTransport(smtpConfig);
 
-    // 将表单项拼接为 HTML 列表
     const formDetails = Object.entries(formData)
       .map(([key, value]) => `<p><strong>${key}:</strong> ${value}</p>`)
       .join('');
 
-    // 发送邮件
     await transporter.sendMail({
       from: `"舶物志 Boatique" <${process.env.SMTP_USER}>`,
       to: notificationEmail,
