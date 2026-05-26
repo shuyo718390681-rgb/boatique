@@ -26,21 +26,17 @@ const CorporateServices: React.FC = () => {
 
   return (
     <div className="bg-brand-cream min-h-screen">
-      {/* Header Section - Moved from Events page */}
+      {/* Header Section */}
       <section className="min-h-[80vh] bg-brand-navy text-white overflow-hidden relative flex items-center">
         <div className="absolute inset-0 pointer-events-none">
           <img 
-            src="/店铺背景图.jpg" 
+            src="https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=2000" 
             alt="Corporate Background" 
             className="w-full h-full object-cover opacity-60"
             referrerPolicy="no-referrer"
           />
-          {/* Multi-layered Gradient Overlays for natural blending */}
-          {/* Horizontal blend from left */}
           <div className="absolute inset-0 bg-gradient-to-r from-brand-navy via-brand-navy/40 to-transparent"></div>
-          {/* Vertical blend from bottom */}
           <div className="absolute inset-0 bg-gradient-to-t from-brand-navy via-transparent to-transparent"></div>
-          {/* Subtle vignette effect */}
           <div className="absolute inset-0 shadow-[inset_0_0_150px_rgba(10,20,47,0.8)]"></div>
         </div>
         <div className="max-w-7xl mx-auto px-6 relative z-10 w-full">
