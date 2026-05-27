@@ -43,6 +43,9 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
   useEffect(() => {
     if (!canvasRef.current) return;
 
+    // 使用可靠的地球纹理图片URL
+    const earthTextureUrl = 'https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg';
+
     const globe = createGlobe(canvasRef.current, {
       devicePixelRatio: 2,
       width: 800 * 2,
@@ -53,10 +56,11 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
       diffuse: 1.2,
       mapSamples: 16000,
       mapBrightness: 6,
-      baseColor: [0.04, 0.07, 0.16], // brand-navy
-      markerColor: [0.77, 0.63, 0.35], // brand-gold
+      baseColor: [0.04, 0.07, 0.16],
+      markerColor: [0.77, 0.63, 0.35],
       glowColor: [0.04, 0.07, 0.16],
       markers: [],
+      map: earthTextureUrl,  // 关键：指定纹理图片
       onRender: (state) => {
         if (!pointerInteracting.current) {
           if (!isPausedRef.current) {
@@ -120,7 +124,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
   };
 
   const getPointPosition = (lat: number, lng: number) => {
-    const r = 300; // Globe radius approximation
+    const r = 300;
     const latRad = (lat * Math.PI) / 180;
     const lngRad = ((lng + (rotation * 180) / Math.PI) * Math.PI) / 180;
     
