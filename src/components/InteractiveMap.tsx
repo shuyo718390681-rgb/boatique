@@ -1,15 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import createGlobe from 'cobe';
 import { motion, AnimatePresence } from 'motion/react';
-import { BRANDS, Brand } from '../constants';
-
-interface MapPoint {
-  id: string;
-  name: string;
-  lat: number;
-  lng: number;
-  brands: Brand[];
-}
+import { BRANDS } from '../constants';
 
 interface InteractiveMapProps {
   onBrandClick?: (brandId: string) => void;
@@ -19,6 +11,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
   const [rotation, setRotation] = useState(0);
+  const [containerWidth, setContainerWidth] = useState(800);
   
   const pointerInteracting = useRef<number | null>(null);
   const pointerInteractionMovement = useRef(0);
@@ -43,6 +36,17 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
   useEffect(() => {
     if (!canvasRef.current) return;
 
+    const updateSize = () => {
+      if (canvasRef.current) {
+        const clientWidth = canvasRef.current.clientWidth;
+        if (clientWidth > 0) {
+          setContainerWidth(clientWidth);
+        }
+      }
+    };
+    updateSize();
+    window.addEventListener('resize', updateSize);
+
     const globe = createGlobe(canvasRef.current, {
       devicePixelRatio: 2,
       width: 800 * 2,
@@ -51,16 +55,16 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
       theta: 0.3,
       dark: 1,
       diffuse: 1.2,
-      mapSamples: 16000,
+      mapSamples: 12000,
       mapBrightness: 6,
-      baseColor: [0.04, 0.07, 0.16], // brand-navy
-      markerColor: [0.77, 0.63, 0.35], // brand-gold
-      glowColor: [0.04, 0.07, 0.16],
+      baseColor: [0.77, 0.63, 0.35], // 金色陆地点阵配色
+      markerColor: [1.0, 1.0, 1.0], // 白色交互指示标记
+      glowColor: [0.12, 0.20, 0.42], // 深邃海军蓝优雅光晕
       markers: [],
       onRender: (state) => {
         if (!pointerInteracting.current) {
           if (!isPausedRef.current) {
-            phiRef.current += 0.005;
+            phiRef.current += 0.003; // 流畅高级感缓速转动
           }
         }
         state.phi = phiRef.current + pointerInteractionMovement.current;
@@ -70,14 +74,14 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
 
     return () => {
       globe.destroy();
+      window.removeEventListener('resize', updateSize);
       if (pauseTimeoutRef.current) clearTimeout(pauseTimeoutRef.current);
     };
   }, []);
 
   const handlePointerDown = (e: React.PointerEvent) => {
-    pointerInteracting.current = e.clientX;
+    pointerInteracting.current = e.clientX - pointerInteractionMovement.current * 200;
     canvasRef.current!.style.cursor = 'grabbing';
-    
     if (pauseTimeoutRef.current) {
       clearTimeout(pauseTimeoutRef.current);
     }
@@ -91,7 +95,6 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
     }
     pointerInteracting.current = null;
     canvasRef.current!.style.cursor = 'grab';
-    
     if (pauseTimeoutRef.current) clearTimeout(pauseTimeoutRef.current);
     pauseTimeoutRef.current = setTimeout(() => {
       isPausedRef.current = false;
@@ -120,14 +123,21 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
   };
 
   const getPointPosition = (lat: number, lng: number) => {
-    const r = 300; // Globe radius approximation
+    const scale = containerWidth > 0 ? containerWidth / 800 : 1;
+    const r = 275 * scale; // 精确贴合 3D 高球体表面的悬浮半径
     const latRad = (lat * Math.PI) / 180;
     const lngRad = ((lng + (rotation * 180) / Math.PI) * Math.PI) / 180;
     
+    // 1. 获取三维未倾斜的正球体原始坐标
     const x = r * Math.cos(latRad) * Math.sin(lngRad);
-    const y = -r * Math.sin(latRad);
-    const z = r * Math.cos(latRad) * Math.cos(lngRad);
-
+    const ySphere = -r * Math.sin(latRad);
+    const zSphere = r * Math.cos(latRad) * Math.cos(lngRad);
+    
+    // 2. 绕 X 轴进行 theta = 0.3 的 3D 点云倾角投影折算，保持标记圆圈与地轴倾斜动态强同步
+    const theta = 0.3;
+    const y = ySphere * Math.cos(theta) - zSphere * Math.sin(theta);
+    const z = ySphere * Math.sin(theta) + zSphere * Math.cos(theta);
+    
     return { x, y, z };
   };
 
@@ -139,20 +149,17 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
         onPointerUp={handlePointerUp}
         onPointerOut={handlePointerUp}
         onPointerMove={handlePointerMove}
-        style={{ width: 800, height: 800, maxWidth: '100%', aspectRatio: '1', touchAction: 'none' }}
+        style={{ width: '100%', height: '100%', maxWidth: '100%', aspectRatio: '1', touchAction: 'none' }}
         className="cursor-grab active:cursor-grabbing"
       />
-
-      {/* Brand Markers */}
       <div className="absolute inset-0 pointer-events-none">
         {HUBS.map((brand) => {
           const pos = getPointPosition(brand.lat, brand.lng);
           const isFront = pos.z > 0;
-          
           return (
             <motion.div
               key={brand.id}
-              className="absolute pointer-events-auto -translate-x-1/2 -translate-y-1/2"
+              className="absolute pointer-events-auto -translate-x-1/2 -translate-y-1/2 font-sans"
               style={{ 
                 left: `calc(50% + ${pos.x}px)`, 
                 top: `calc(50% + ${pos.y}px)`,
@@ -170,7 +177,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
                 onMouseEnter={handleMouseEnterMarker}
                 onMouseLeave={handleMouseLeaveMarker}
               >
-                {/* Geographic Label */}
+                {/* 城市中英双语铭牌标签，根据其地理位置进行略微的防折叠遮挡避位 */}
                 <div className={`mb-2 px-2 py-0.5 bg-brand-navy/40 backdrop-blur-sm border border-white/10 rounded text-[8px] text-brand-gold uppercase tracking-widest whitespace-nowrap transition-transform duration-500 ${
                   brand.id === 'taoguafang' ? '-translate-x-4' : 
                   brand.id === 'hanyi' ? 'translate-x-4' : 
@@ -179,11 +186,10 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
                 }`}>
                   {BILINGUAL_LOCATIONS[brand.location] || brand.location}
                 </div>
-
-                {/* Marker Dot (Solid, no glow) */}
+                {/* 指示光标 */}
                 <div className={`w-2.5 h-2.5 rounded-full transition-all duration-500 ${selectedCity === brand.location ? 'bg-white scale-125' : 'bg-brand-gold'}`} />
                 
-                {/* Tooltip / City Brands Panel */}
+                {/* 弹窗内容：当点按指示光标时滑出高级感磨砂质感卡片列表 */}
                 <AnimatePresence>
                   {selectedCity === brand.location && (
                     <motion.div
@@ -201,7 +207,6 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
                             {getBrandsInCity(brand.location).length} 个品牌
                           </span>
                         </div>
-                        
                         <div className="flex flex-col gap-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                           {getBrandsInCity(brand.location).map((cityBrand) => (
                             <div 
