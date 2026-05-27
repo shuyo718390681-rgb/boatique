@@ -53,8 +53,8 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
       diffuse: 1.2,
       mapSamples: 16000,
       mapBrightness: 6,
-      baseColor: [0.04, 0.07, 0.16], // brand-navy
-      markerColor: [0.77, 0.63, 0.35], // brand-gold
+      baseColor: [0.04, 0.07, 0.16],
+      markerColor: [0.77, 0.63, 0.35],
       glowColor: [0.04, 0.07, 0.16],
       markers: [],
       onRender: (state) => {
@@ -120,7 +120,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
   };
 
   const getPointPosition = (lat: number, lng: number) => {
-    const r = 300; // Globe radius approximation
+    const r = 300;
     const latRad = (lat * Math.PI) / 180;
     const lngRad = ((lng + (rotation * 180) / Math.PI) * Math.PI) / 180;
     
@@ -180,10 +180,10 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
                   {BILINGUAL_LOCATIONS[brand.location] || brand.location}
                 </div>
 
-                {/* Marker Dot (Solid, no glow) */}
+                {/* Marker Dot */}
                 <div className={`w-2.5 h-2.5 rounded-full transition-all duration-500 ${selectedCity === brand.location ? 'bg-white scale-125' : 'bg-brand-gold'}`} />
                 
-                {/* Tooltip / City Brands Panel */}
+                {/* Tooltip */}
                 <AnimatePresence>
                   {selectedCity === brand.location && (
                     <motion.div
