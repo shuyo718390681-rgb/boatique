@@ -41,7 +41,6 @@ const Home: React.FC<HomeProps> = ({ setPage, onBrandClick }) => {
             transition={{ duration: 2, ease: "easeOut" }}
             className="relative z-20"
           >
-            {/* Drag Hint - Positioned relative to the globe area */}
             <div className="absolute top-0 left-0 md:top-4 md:left-4 z-30 pointer-events-none">
               <motion.div
                 initial={{ opacity: 0, x: -10 }}
@@ -104,13 +103,6 @@ const Home: React.FC<HomeProps> = ({ setPage, onBrandClick }) => {
                   Every piece in "Boatique" carries the warmth of the artisan and the soul of the era.
                 </span>
               </p>
-              {/* <button 
-                onClick={onShop}
-                className="group flex items-center gap-6 text-[10px] font-bold uppercase tracking-[0.4em] text-brand-navy hover:text-brand-gold transition-colors"
-              >
-                探索好物
-                <div className="w-12 h-px bg-brand-navy group-hover:bg-brand-gold transition-all group-hover:w-20"></div>
-              </button> */}
             </motion.div>
 
             <motion.div
@@ -243,6 +235,7 @@ const Home: React.FC<HomeProps> = ({ setPage, onBrandClick }) => {
           </div>
         </div>
       </section>
+
     </div>
   );
 };
