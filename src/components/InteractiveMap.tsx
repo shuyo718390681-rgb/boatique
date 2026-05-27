@@ -43,16 +43,23 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
   useEffect(() => {
     if (!canvasRef.current) return;
 
-    const globe = createGlobe(canvasRef.current, {
+    // 确保 canvas 尺寸有效
+    const canvas = canvasRef.current;
+    const container = canvas.parentElement;
+    const size = container ? container.clientWidth : 800;
+    canvas.width = size;
+    canvas.height = size;
+
+    const globe = createGlobe(canvas, {
       devicePixelRatio: 2,
-      width: 800 * 2,
-      height: 800 * 2,
+      width: size,
+      height: size,
       phi: 0,
       theta: 0.3,
-      dark: 1,
+      dark: 0,               // 让地图明亮
       diffuse: 1.2,
       mapSamples: 16000,
-      mapBrightness: 6,
+      mapBrightness: 8,      // 提高亮度，避免黑色
       baseColor: [0.04, 0.07, 0.16],
       markerColor: [0.77, 0.63, 0.35],
       glowColor: [0.04, 0.07, 0.16],
@@ -68,8 +75,20 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
       },
     });
 
+    // 监听容器大小变化，动态调整 canvas 尺寸
+    const resizeObserver = new ResizeObserver(() => {
+      if (container) {
+        const newSize = container.clientWidth;
+        canvas.width = newSize;
+        canvas.height = newSize;
+        globe.resize(newSize, newSize);
+      }
+    });
+    if (container) resizeObserver.observe(container);
+
     return () => {
       globe.destroy();
+      resizeObserver.disconnect();
       if (pauseTimeoutRef.current) clearTimeout(pauseTimeoutRef.current);
     };
   }, []);
@@ -120,7 +139,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
   };
 
   const getPointPosition = (lat: number, lng: number) => {
-    const r = 300;
+    const r = 300; // Globe radius approximation
     const latRad = (lat * Math.PI) / 180;
     const lngRad = ((lng + (rotation * 180) / Math.PI) * Math.PI) / 180;
     
@@ -139,7 +158,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
         onPointerUp={handlePointerUp}
         onPointerOut={handlePointerUp}
         onPointerMove={handlePointerMove}
-        style={{ width: 800, height: 800, maxWidth: '100%', aspectRatio: '1', touchAction: 'none' }}
+        style={{ width: '100%', height: '100%', touchAction: 'none' }}
         className="cursor-grab active:cursor-grabbing"
       />
 
