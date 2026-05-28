@@ -3,14 +3,6 @@ import createGlobe from 'cobe';
 import { motion, AnimatePresence } from 'motion/react';
 import { BRANDS, Brand } from '../constants';
 
-interface MapPoint {
-  id: string;
-  name: string;
-  lat: number;
-  lng: number;
-  brands: Brand[];
-}
-
 interface InteractiveMapProps {
   onBrandClick?: (brandId: string) => void;
 }
@@ -49,18 +41,18 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
       height: 800 * 2,
       phi: 0,
       theta: 0.3,
-      dark: 1,
+      dark: 1.2,          // 适当提高使大陆轮廓更明显
       diffuse: 1.2,
-      mapSamples: 16000,
+      mapSamples: 24000,   // 增加采样，让大陆边缘更清晰
       mapBrightness: 6,
-      baseColor: [0.04, 0.07, 0.16], // brand-navy
-      markerColor: [0.77, 0.63, 0.35], // brand-gold
+      baseColor: [0.04, 0.07, 0.16], // 深蓝底色
+      markerColor: [0.77, 0.63, 0.35], // 金色光点
       glowColor: [0.04, 0.07, 0.16],
       markers: [],
       onRender: (state) => {
         if (!pointerInteracting.current) {
           if (!isPausedRef.current) {
-            phiRef.current += 0.005;
+            phiRef.current += 0.004;   // 自转速度
           }
         }
         state.phi = phiRef.current + pointerInteractionMovement.current;
@@ -77,10 +69,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
   const handlePointerDown = (e: React.PointerEvent) => {
     pointerInteracting.current = e.clientX;
     canvasRef.current!.style.cursor = 'grabbing';
-    
-    if (pauseTimeoutRef.current) {
-      clearTimeout(pauseTimeoutRef.current);
-    }
+    if (pauseTimeoutRef.current) clearTimeout(pauseTimeoutRef.current);
     isPausedRef.current = true;
   };
 
@@ -91,7 +80,6 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
     }
     pointerInteracting.current = null;
     canvasRef.current!.style.cursor = 'grab';
-    
     if (pauseTimeoutRef.current) clearTimeout(pauseTimeoutRef.current);
     pauseTimeoutRef.current = setTimeout(() => {
       isPausedRef.current = false;
@@ -106,9 +94,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
   };
 
   const handleMouseEnterMarker = () => {
-    if (pauseTimeoutRef.current) {
-      clearTimeout(pauseTimeoutRef.current);
-    }
+    if (pauseTimeoutRef.current) clearTimeout(pauseTimeoutRef.current);
     isPausedRef.current = true;
   };
 
@@ -120,14 +106,12 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
   };
 
   const getPointPosition = (lat: number, lng: number) => {
-    const r = 300; // Globe radius approximation
+    const r = 300;
     const latRad = (lat * Math.PI) / 180;
     const lngRad = ((lng + (rotation * 180) / Math.PI) * Math.PI) / 180;
-    
     const x = r * Math.cos(latRad) * Math.sin(lngRad);
     const y = -r * Math.sin(latRad);
     const z = r * Math.cos(latRad) * Math.cos(lngRad);
-
     return { x, y, z };
   };
 
@@ -143,12 +127,11 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
         className="cursor-grab active:cursor-grabbing"
       />
 
-      {/* Brand Markers */}
+      {/* Brand Markers (保持不变) */}
       <div className="absolute inset-0 pointer-events-none">
         {HUBS.map((brand) => {
           const pos = getPointPosition(brand.lat, brand.lng);
           const isFront = pos.z > 0;
-          
           return (
             <motion.div
               key={brand.id}
@@ -170,7 +153,6 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
                 onMouseEnter={handleMouseEnterMarker}
                 onMouseLeave={handleMouseLeaveMarker}
               >
-                {/* Geographic Label */}
                 <div className={`mb-2 px-2 py-0.5 bg-brand-navy/40 backdrop-blur-sm border border-white/10 rounded text-[8px] text-brand-gold uppercase tracking-widest whitespace-nowrap transition-transform duration-500 ${
                   brand.id === 'taoguafang' ? '-translate-x-4' : 
                   brand.id === 'hanyi' ? 'translate-x-4' : 
@@ -179,11 +161,8 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
                 }`}>
                   {BILINGUAL_LOCATIONS[brand.location] || brand.location}
                 </div>
-
-                {/* Marker Dot (Solid, no glow) */}
                 <div className={`w-2.5 h-2.5 rounded-full transition-all duration-500 ${selectedCity === brand.location ? 'bg-white scale-125' : 'bg-brand-gold'}`} />
                 
-                {/* Tooltip / City Brands Panel */}
                 <AnimatePresence>
                   {selectedCity === brand.location && (
                     <motion.div
@@ -201,7 +180,6 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
                             {getBrandsInCity(brand.location).length} 个品牌
                           </span>
                         </div>
-                        
                         <div className="flex flex-col gap-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                           {getBrandsInCity(brand.location).map((cityBrand) => (
                             <div 
