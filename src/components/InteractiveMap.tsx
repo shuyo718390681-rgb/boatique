@@ -41,13 +41,13 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
       height: 800 * 2,
       phi: 0,
       theta: 0.3,
-      dark: 1.2,          // 适当提高使大陆轮廓更明显
+      dark: 0.2,          // 适当提高使大陆轮廓更明显
       diffuse: 1.2,
       mapSamples: 24000,   // 增加采样，让大陆边缘更清晰
       mapBrightness: 6,
-      baseColor: [0.04, 0.07, 0.16], // 深蓝底色
+      baseColor: [0.2, 0.3, 0.6], // 深蓝底色
       markerColor: [0.77, 0.63, 0.35], // 金色光点
-      glowColor: [0.04, 0.07, 0.16],
+      glowColor: [0.3, 0.5, 0.8],
       markers: [],
       onRender: (state) => {
         if (!pointerInteracting.current) {
