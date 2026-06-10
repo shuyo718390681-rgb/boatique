@@ -1,45 +1,13 @@
 import React, { useRef, useEffect, useState } from "react";
 
-// 1. 声明专属于你网站的四大品牌起源地基础结构
-interface CityMarker {
-  id: string;
-  nameCn: string;
-  nameEn: string;
-  lat: number;
-  lon: number;
+// 1. 为保 100% 兼容，就地声明精简类型，防止 GitHub 路径报错
+export interface GlobeCity {
+  id: string;      // 城市唯一标识（例如 "shanghai"、"shaoxing"、"venice"）
+  nameCn: string;  // 中文显示（例如 "中国 绍兴"）
+  nameEn: string;  // 英文显示（例如 "SHAOXING"）
+  lat: number;     // 纬度（地球仪画点用）
+  lon: number;     // 经度（地球仪画点用）
 }
-
-// 2. 仅保留并精确匹配你的核心 4 大品牌城市，排除其余无关国家城市
-const CITIES_DATA: CityMarker[] = [
-  {
-    id: "shanghai",
-    nameCn: "中国 上海",
-    nameEn: "SHANGHAI",
-    lat: 31.23,
-    lon: 121.47,
-  },
-  {
-    id: "shaoxing",
-    nameCn: "中国 绍兴",
-    nameEn: "SHAOXING",
-    lat: 30.01,
-    lon: 120.57,
-  },
-  {
-    id: "venice",
-    nameCn: "意大利 威尼斯",
-    nameEn: "VENICE",
-    lat: 45.44,
-    lon: 12.31,
-  },
-  {
-    id: "florence",
-    nameCn: "意大利 佛罗伦萨",
-    nameEn: "FLORENCE",
-    lat: 43.76,
-    lon: 11.25,
-  }
-];
 
 interface GlobePoint {
   x: number;
@@ -52,13 +20,15 @@ interface GlobePoint {
 }
 
 interface GlobeProps {
-  activeCityId: string | null;
-  onSelectCity: (cityId: string) => void;
-  hoveredCityId: string | null;
-  onHoverCity: (cityId: string | null) => void;
+  cities: GlobeCity[];                     // 👈 动态传入你的目标城市数据集（直接与你的品牌映射）
+  activeCityId: string | null;             // 👈 外部控制：当前哪个城市被点击激活
+  onSelectCity: (cityId: string) => void;  // 👈 交互：当点击某个城市时回调给父组件
+  hoveredCityId: string | null;            // 👈 外部控制：当前鼠标滑过了哪个城市
+  onHoverCity: (cityId: string | null) => void; // 👈 交互：鼠标悬停状态的联动
 }
 
 export default function Globe({
+  cities = [],
   activeCityId,
   onSelectCity,
   hoveredCityId,
@@ -67,12 +37,13 @@ export default function Globe({
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // 初始化旋转角度：设定在 4.2，让中国/欧亚大陆区域默认首要面向屏幕中央展示
-  const [rotationY, setRotationY] = useState(4.2); 
-  const [rotationX, setRotationX] = useState(0.2); 
+  // 1. 初始化 3D 旋转角度
+  const [rotationY, setRotationY] = useState(4.2); // 偏角：使中国/欧亚大陆率先面向用户
+  const [rotationX, setRotationX] = useState(0.2); // 黄金仰角，俯视立体感
   const [isHovered, setIsHovered] = useState(false);
   const [dimensions, setDimensions] = useState({ width: 500, height: 500 });
 
+  // 2. 拖拽及实时角度引用 (避免 60fps 重绘闭包里的 State 获取延迟)
   const isDraggingRef = useRef(false);
   const lastMouseXRef = useRef(0);
   const lastMouseYRef = useRef(0);
@@ -82,9 +53,10 @@ export default function Globe({
   useEffect(() => { rotationYRef.current = rotationY; }, [rotationY]);
   useEffect(() => { rotationXRef.current = rotationX; }, [rotationX]);
 
+  // 粒子集
   const [globeDots, setGlobeDots] = useState<GlobePoint[]>([]);
 
-  // 1. 响应式监听容器尺寸
+  // 3. 自适应容器容器缩放（防崩塌）
   useEffect(() => {
     if (!containerRef.current) return;
     const observer = new ResizeObserver((entries) => {
@@ -98,7 +70,7 @@ export default function Globe({
     return () => observer.disconnect();
   }, []);
 
-  // 2. 高还原度程序化立体网质生成
+  // 4. 程序化世界微雕网格生成（高精自载矢量坐标）
   useEffect(() => {
     const mapW = 180;
     const mapH = 90;
@@ -109,13 +81,13 @@ export default function Globe({
 
     if (!offCtx) return;
 
-    // 内置各大洲主要大陆高还原解构算法，脱离一切外部网络，秒开展示
+    // 内置全球七大洲主要大陆高还原解构算法
     const drawLandContour = (ctx: CanvasRenderingContext2D) => {
       ctx.fillStyle = "#000000";
       ctx.fillRect(0, 0, mapW, mapH);
       ctx.fillStyle = "#ffffff";
 
-      // 北美洲
+      // 北美洲区域包络线
       ctx.beginPath();
       ctx.moveTo(mapW * 0.08, mapH * 0.15);
       ctx.lineTo(mapW * 0.28, mapH * 0.12);
@@ -131,7 +103,7 @@ export default function Globe({
       ctx.ellipse(mapW * 0.35, mapH * 0.12, mapW * 0.04, mapH * 0.05, 0.2, 0, Math.PI * 2);
       ctx.fill();
 
-      // 南美洲
+      // 南美洲区域包络线
       ctx.beginPath();
       ctx.moveTo(mapW * 0.25, mapH * 0.43);
       ctx.lineTo(mapW * 0.32, mapH * 0.45);
@@ -141,7 +113,7 @@ export default function Globe({
       ctx.closePath();
       ctx.fill();
 
-      // 非洲
+      // 非洲板块
       ctx.beginPath();
       ctx.moveTo(mapW * 0.46, mapH * 0.35);
       ctx.lineTo(mapW * 0.58, mapH * 0.35);
@@ -151,7 +123,7 @@ export default function Globe({
       ctx.closePath();
       ctx.fill();
 
-      // 欧亚大陆
+      // 欧亚大陆超巨板块
       ctx.beginPath();
       ctx.moveTo(mapW * 0.45, mapH * 0.25);
       ctx.lineTo(mapW * 0.55, mapH * 0.15);
@@ -170,7 +142,7 @@ export default function Globe({
       ctx.ellipse(mapW * 0.82, mapH * 0.65, mapW * 0.06, mapH * 0.05, -0.1, 0, Math.PI * 2);
       ctx.fill();
       
-      // 细微岛链装饰
+      // 不列颠与日本列岛微雕
       ctx.beginPath();
       ctx.ellipse(mapW * 0.45, mapH * 0.22, mapW * 0.015, mapH * 0.02, -0.4, 0, Math.PI * 2);
       ctx.ellipse(mapW * 0.40, mapH * 0.16, mapW * 0.01, mapH * 0.01, 0, 0, Math.PI * 2);
@@ -185,6 +157,7 @@ export default function Globe({
       const pixels = imgData.data;
       const dotsPool: GlobePoint[] = [];
 
+      // 纬度/经度渲染密度步长
       const latStep = 2.4; 
       const lonStep = 2.8;
 
@@ -222,7 +195,7 @@ export default function Globe({
 
     generateDots();
 
-    // 自动尝试加载高精轮廓提升质感
+    // 尝试拉取超清真实地理轮廓
     const img = new Image();
     img.crossOrigin = "anonymous";
     img.src = "https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/World_map_blank_black_white.png/320px-World_map_blank_black_white.png";
@@ -232,12 +205,12 @@ export default function Globe({
         offCtx.drawImage(img, 0, 0, mapW, mapH);
         generateDots();
       } catch (e) {
-        console.warn("Continent loading fallback active.", e);
+        console.warn("World Map contour fell back to vector generation due to CORS.", e);
       }
     };
   }, []);
 
-  // 3. 渲染物理运动及光影遮挡
+  // 5. 核心 3D 渲染帧循环
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -252,12 +225,12 @@ export default function Globe({
 
       const cx = dimensions.width / 2;
       const cy = dimensions.height / 2;
-      const globeRadius = dimensions.width * 0.43; // 适配比例，边缘防切割
+      const globeRadius = dimensions.width * 0.43;
 
       let rotY = rotationYRef.current;
       let rotX = rotationXRef.current;
 
-      // 无鼠标悬停时，温和自转
+      // 悬停时停止自转，非悬停、非拖拽时轻缓自转
       if (!isDraggingRef.current && !isHovered) {
         rotY += 0.0018; 
         setRotationY(rotY);
@@ -270,7 +243,7 @@ export default function Globe({
 
       pulseTime += 0.035;
 
-      // 绘制暗调星光底座晕光
+      // 绘制球体背后暗光晕，塑造视差厚重感
       const depthGlow = ctx.createRadialGradient(cx, cy, globeRadius * 0.1, cx, cy, globeRadius * 1.1);
       depthGlow.addColorStop(0, "#080c18");
       depthGlow.addColorStop(0.5, "#04070e");
@@ -286,11 +259,12 @@ export default function Globe({
       for (let i = 0; i < len; i++) {
         const dot = globeDots[i];
         
-        // 3D 转换运行球面轨道旋转
+        // Y 轴自转
         const rx1 = dot.x * cosY - dot.z * sinY;
         const ry1 = dot.y;
         const rz1 = dot.x * sinY + dot.z * cosY;
 
+        // X 轴偏移
         const rx2 = rx1;
         const ry2 = ry1 * cosX - rz1 * sinX;
         const rz2 = ry1 * sinX + rz1 * cosX;
@@ -305,7 +279,7 @@ export default function Globe({
         });
       }
 
-      // 绘制背景半球粒子（淡化）
+      // 5.1 绘制 背面 陆地粒子 (pz <= 0，虚化渲染)
       ctx.fillStyle = "rgba(75, 85, 99, 0.15)";
       for (let i = 0; i < projectedDots.length; i++) {
         const pd = projectedDots[i];
@@ -316,14 +290,14 @@ export default function Globe({
         }
       }
 
-      // 大气切面外边缘微光光圈
+      // 地球完美切面光环
       ctx.strokeStyle = "rgba(148, 163, 184, 0.08)";
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.arc(cx, cy, globeRadius, 0, Math.PI * 2);
       ctx.stroke();
 
-      // 绘制前景半球核心高级金色质感粒子
+      // 5.2 绘制 正面 陆地粒子 (pz > 0，亮色渲染)
       for (let i = 0; i < projectedDots.length; i++) {
         const pd = projectedDots[i];
         if (pd.pz > 0) {
@@ -334,8 +308,8 @@ export default function Globe({
         }
       }
 
-      // 4. 专属 4 大城市微雕多层呼吸光波标签
-      CITIES_DATA.forEach((city) => {
+      // 5.3 绘制由 Props 传入的城市点位
+      cities.forEach((city) => {
         const radLat = (city.lat * Math.PI) / 180;
         const radLon = (city.lon * Math.PI) / 180;
 
@@ -351,7 +325,7 @@ export default function Globe({
         const cry2 = cry1 * cosX - crz1 * sinX;
         const crz2 = cry1 * sinX + crz1 * cosX;
 
-        // 如果城市自转滚动到背面去，不予渲染，确保立体感无破绽
+        // 如果城市坐标旋转至背面，不渲染
         if (crz2 <= 0.05) return;
 
         const pinX = cx + crx2 * globeRadius;
@@ -360,7 +334,7 @@ export default function Globe({
         const isCityActive = city.id === activeCityId;
         const isCityHovered = city.id === hoveredCityId;
 
-        // 手工艺呼吸高定光晕
+        // 呼吸效果多层波纹
         const rippleCount = 3;
         for (let r = 0; r < rippleCount; r++) {
           const rSpeed = 0.015;
@@ -375,7 +349,7 @@ export default function Globe({
           ctx.stroke();
         }
 
-        // 核心实心金球
+        // 中心高质感金球 / 亮球
         ctx.fillStyle = isCityActive || isCityHovered ? "#d4af37" : "#e0f2fe";
         ctx.beginPath();
         ctx.arc(pinX, pinY, 4, 0, Math.PI * 2);
@@ -387,7 +361,7 @@ export default function Globe({
         ctx.arc(pinX, pinY, 6, 0, Math.PI * 2);
         ctx.stroke();
 
-        // 东方极简斜折画线拉引
+        // 东方经典斜折标引线
         ctx.strokeStyle = "rgba(212, 175, 55, 0.4)";
         ctx.lineWidth = 1;
         ctx.beginPath();
@@ -397,7 +371,7 @@ export default function Globe({
         ctx.lineTo(pinX + angleDir * 50, pinY - 14);
         ctx.stroke();
 
-        // 精致中英双语标签排版
+        // 标签文字
         ctx.font = "normal 14px sans-serif";
         ctx.fillStyle = isCityActive || isCityHovered ? "#d4af37" : "#f8fafc";
         ctx.textAlign = angleDir === 1 ? "left" : "right";
@@ -415,9 +389,9 @@ export default function Globe({
     render();
 
     return () => { cancelAnimationFrame(animFrameId); };
-  }, [globeDots, dimensions, activeCityId, hoveredCityId, isHovered]);
+  }, [globeDots, dimensions, cities, activeCityId, hoveredCityId, isHovered]);
 
-  // 5. 拖拽及选中动作触发机制
+  // 6. 捕捉拖拽与坐标定位
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     isDraggingRef.current = true;
     lastMouseXRef.current = e.clientX;
@@ -443,8 +417,8 @@ export default function Globe({
 
       let foundHoverId: string | null = null;
 
-      for (let i = 0; i < CITIES_DATA.length; i++) {
-        const city = CITIES_DATA[i];
+      for (let i = 0; i < cities.length; i++) {
+        const city = cities[i];
         const radLat = (city.lat * Math.PI) / 180;
         const radLon = (city.lon * Math.PI) / 180;
 
@@ -508,8 +482,8 @@ export default function Globe({
     const cosX = Math.cos(rotationXRef.current);
     const sinX = Math.sin(rotationXRef.current);
 
-    for (let i = 0; i < CITIES_DATA.length; i++) {
-      const city = CITIES_DATA[i];
+    for (let i = 0; i < cities.length; i++) {
+      const city = cities[i];
       const radLat = (city.lat * Math.PI) / 180;
       const radLon = (city.lon * Math.PI) / 180;
 
@@ -533,7 +507,6 @@ export default function Globe({
         const distance = Math.sqrt(dx * dx + dy * dy);
 
         if (distance <= 16) {
-          // 触发父级设定的联动与页面跳转行为
           onSelectCity(city.id);
           break;
         }
