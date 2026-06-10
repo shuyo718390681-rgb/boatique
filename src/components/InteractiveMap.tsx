@@ -36,10 +36,8 @@ export default function InteractiveMap() {
         </p>
       </div>
 
-      {/* 主画布 */}
       <div className="w-full flex flex-col lg:flex-row items-center justify-center gap-6 relative z-10">
-        
-        {/* 左边：名城捷径导轨 */}
+        {/* 左偏自转触发栏 */}
         <div 
           className="w-full lg:w-64 flex flex-row lg:flex-col gap-2 overflow-x-auto lg:overflow-x-visible pb-2 lg:pb-0 shrink-0 custom-scrollbar select-none order-2 lg:order-1"
           id="cities-rail-container"
@@ -91,7 +89,7 @@ export default function InteractiveMap() {
           })}
         </div>
 
-        {/* 中间：3D 地球仪 */}
+        {/* 3D 拟态球体 viewport */}
         <div 
           className="flex-1 w-full max-w-[450px] md:max-w-[500px] aspect-square relative z-10 flex items-center justify-center order-1 lg:order-2" 
           id="globe-container-viewport"
@@ -116,11 +114,8 @@ export default function InteractiveMap() {
           </div>
         </div>
 
-        {/* 右边：城市品牌详情侧板 */}
-        <div 
-          className="w-full lg:w-80 flex flex-col gap-4 shrink-0 order-3 z-20"
-          id="map-detail-card-panel"
-        >
+        {/* 右边抽屉板 */}
+        <div className="w-full lg:w-80 flex flex-col gap-4 shrink-0 order-3 z-20" id="map-detail-card-panel">
           {selectedCity ? (
             <div
               className="w-full bg-[#070b16]/95 border border-slate-800 backdrop-blur-xl rounded-xl shadow-2xl shadow-black/90 overflow-hidden flex flex-col transition-all duration-300 animate-in fade-in slide-in-from-bottom-5"
@@ -208,7 +203,7 @@ export default function InteractiveMap() {
         </div>
       </div>
 
-      {/* 故事弹窗板 */}
+      {/* 4. 具体品牌的手作故事大弹窗 */}
       {selectedBrand && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in duration-300">
           <div 
@@ -220,7 +215,7 @@ export default function InteractiveMap() {
 
             <div className="px-5 py-4 flex items-center justify-between border-b border-slate-900 bg-slate-950/30">
               <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-[#d4af37]" />
+                <Sparkles className="w-4 h-4 text-[#d4af37] animate-pulse" />
                 <span className="text-[11px] font-mono text-[#d4af37] font-bold tracking-[0.2em] uppercase">手工绝艺档案 MASTERPIECE</span>
               </div>
               <button
@@ -273,7 +268,7 @@ export default function InteractiveMap() {
                 </div>
 
                 <div>
-                  <h4 className="text-xs font-bold text-slate-400 tracking-wider mb-1.5 font-sans">
+                  <h4 className="text-xs font-bold text-slate-405 tracking-wider mb-1.5 font-sans">
                     世代承袭长卷 Artisan Legacy
                   </h4>
                   <p className="text-xs md:text-[13px] text-slate-300 leading-relaxed font-sans text-justify">
