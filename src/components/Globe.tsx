@@ -1,34 +1,15 @@
 import React, { useRef, useEffect, useState } from "react";
-
-// 1. 为保 100% 兼容，就地声明精简类型，防止 GitHub 路径报错
-export interface GlobeCity {
-  id: string;      // 城市唯一标识（例如 "shanghai"、"shaoxing"、"venice"）
-  nameCn: string;  // 中文显示（例如 "中国 绍兴"）
-  nameEn: string;  // 英文显示（例如 "SHAOXING"）
-  lat: number;     // 纬度（地球仪画点用）
-  lon: number;     // 经度（地球仪画点用）
-}
-
-interface GlobePoint {
-  x: number;
-  y: number;
-  z: number;
-  px: number;
-  py: number;
-  pz: number;
-  opacity: number;
-}
+import { CityMarker, GlobePoint } from "../types";
+import { CITIES_DATA } from "../data";
 
 interface GlobeProps {
-  cities: GlobeCity[];                     // 👈 动态传入你的目标城市数据集（直接与你的品牌映射）
-  activeCityId: string | null;             // 👈 外部控制：当前哪个城市被点击激活
-  onSelectCity: (cityId: string) => void;  // 👈 交互：当点击某个城市时回调给父组件
-  hoveredCityId: string | null;            // 👈 外部控制：当前鼠标滑过了哪个城市
-  onHoverCity: (cityId: string | null) => void; // 👈 交互：鼠标悬停状态的联动
+  activeCityId: string | null;
+  onSelectCity: (cityId: string) => void;
+  hoveredCityId: string | null;
+  onHoverCity: (cityId: string | null) => void;
 }
 
 export default function Globe({
-  cities = [],
   activeCityId,
   onSelectCity,
   hoveredCityId,
@@ -81,7 +62,7 @@ export default function Globe({
 
     if (!offCtx) return;
 
-    // 内置全球七大洲主要大陆高还原解构算法
+    // 内置全球七大洲主要大陆高还原解构算法（确保离线 100% 跑通）
     const drawLandContour = (ctx: CanvasRenderingContext2D) => {
       ctx.fillStyle = "#000000";
       ctx.fillRect(0, 0, mapW, mapH);
@@ -142,7 +123,7 @@ export default function Globe({
       ctx.ellipse(mapW * 0.82, mapH * 0.65, mapW * 0.06, mapH * 0.05, -0.1, 0, Math.PI * 2);
       ctx.fill();
       
-      // 不列颠与日本列岛微雕
+      // 不列颠与日本列岛微雕 (大陆轮廓背景线)
       ctx.beginPath();
       ctx.ellipse(mapW * 0.45, mapH * 0.22, mapW * 0.015, mapH * 0.02, -0.4, 0, Math.PI * 2);
       ctx.ellipse(mapW * 0.40, mapH * 0.16, mapW * 0.01, mapH * 0.01, 0, 0, Math.PI * 2);
@@ -177,6 +158,7 @@ export default function Globe({
             const idx = (v * mapW + u) * 4;
             if (pixels[idx] > 100) {
               const radLon = (lon * Math.PI) / 180;
+              // 3D 球面参数方程映射
               const x = Math.cos(radLat) * Math.sin(radLon);
               const y = -Math.sin(radLat);
               const z = Math.cos(radLat) * Math.cos(radLon);
@@ -210,7 +192,7 @@ export default function Globe({
     };
   }, []);
 
-  // 5. 核心 3D 渲染帧循环
+  // 5. 核心 3D 渲染帧循环（包含 Z-buffer 深度前后遮挡排序）
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -225,7 +207,7 @@ export default function Globe({
 
       const cx = dimensions.width / 2;
       const cy = dimensions.height / 2;
-      const globeRadius = dimensions.width * 0.43;
+      const globeRadius = dimensions.width * 0.38;
 
       let rotY = rotationYRef.current;
       let rotX = rotationXRef.current;
@@ -308,8 +290,8 @@ export default function Globe({
         }
       }
 
-      // 5.3 绘制由 Props 传入的城市点位
-      cities.forEach((city) => {
+      // 5.3 绘制城市波纹及引线
+      CITIES_DATA.forEach((city) => {
         const radLat = (city.lat * Math.PI) / 180;
         const radLon = (city.lon * Math.PI) / 180;
 
@@ -325,7 +307,7 @@ export default function Globe({
         const cry2 = cry1 * cosX - crz1 * sinX;
         const crz2 = cry1 * sinX + crz1 * cosX;
 
-        // 如果城市坐标旋转至背面，不渲染
+        // 如果城市坐标旋转至背面，则不重复绘制
         if (crz2 <= 0.05) return;
 
         const pinX = cx + crx2 * globeRadius;
@@ -349,7 +331,7 @@ export default function Globe({
           ctx.stroke();
         }
 
-        // 中心高质感金球 / 亮球
+        // 中心质感球
         ctx.fillStyle = isCityActive || isCityHovered ? "#d4af37" : "#e0f2fe";
         ctx.beginPath();
         ctx.arc(pinX, pinY, 4, 0, Math.PI * 2);
@@ -361,7 +343,7 @@ export default function Globe({
         ctx.arc(pinX, pinY, 6, 0, Math.PI * 2);
         ctx.stroke();
 
-        // 东方经典斜折标引线
+        // 经典斜边引线
         ctx.strokeStyle = "rgba(212, 175, 55, 0.4)";
         ctx.lineWidth = 1;
         ctx.beginPath();
@@ -371,7 +353,7 @@ export default function Globe({
         ctx.lineTo(pinX + angleDir * 50, pinY - 14);
         ctx.stroke();
 
-        // 标签文字
+        // 文字标签
         ctx.font = "normal 14px sans-serif";
         ctx.fillStyle = isCityActive || isCityHovered ? "#d4af37" : "#f8fafc";
         ctx.textAlign = angleDir === 1 ? "left" : "right";
@@ -389,7 +371,7 @@ export default function Globe({
     render();
 
     return () => { cancelAnimationFrame(animFrameId); };
-  }, [globeDots, dimensions, cities, activeCityId, hoveredCityId, isHovered]);
+  }, [globeDots, dimensions, activeCityId, hoveredCityId, isHovered]);
 
   // 6. 捕捉拖拽与坐标定位
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -408,7 +390,7 @@ export default function Globe({
     if (!isDraggingRef.current) {
       const cx = dimensions.width / 2;
       const cy = dimensions.height / 2;
-      const globeRadius = dimensions.width * 0.43;
+      const globeRadius = dimensions.width * 0.38;
 
       const cosY = Math.cos(rotationYRef.current);
       const sinY = Math.sin(rotationYRef.current);
@@ -417,8 +399,8 @@ export default function Globe({
 
       let foundHoverId: string | null = null;
 
-      for (let i = 0; i < cities.length; i++) {
-        const city = cities[i];
+      for (let i = 0; i < CITIES_DATA.length; i++) {
+        const city = CITIES_DATA[i];
         const radLat = (city.lat * Math.PI) / 180;
         const radLon = (city.lon * Math.PI) / 180;
 
@@ -441,6 +423,7 @@ export default function Globe({
           const dy = mouseY - pinY;
           const distance = Math.sqrt(dx * dx + dy * dy);
 
+          // 宽容热区检测 (16像素)
           if (distance <= 16) {
             foundHoverId = city.id;
             break;
@@ -475,15 +458,15 @@ export default function Globe({
 
     const cx = dimensions.width / 2;
     const cy = dimensions.height / 2;
-    const globeRadius = dimensions.width * 0.43;
+    const globeRadius = dimensions.width * 0.38;
 
     const cosY = Math.cos(rotationYRef.current);
     const sinY = Math.sin(rotationYRef.current);
     const cosX = Math.cos(rotationXRef.current);
     const sinX = Math.sin(rotationXRef.current);
 
-    for (let i = 0; i < cities.length; i++) {
-      const city = cities[i];
+    for (let i = 0; i < CITIES_DATA.length; i++) {
+      const city = CITIES_DATA[i];
       const radLat = (city.lat * Math.PI) / 180;
       const radLon = (city.lon * Math.PI) / 180;
 
