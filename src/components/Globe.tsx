@@ -18,13 +18,13 @@ export default function Globe({
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // 1. 初始化 3D 旋转角度
-  const [rotationY, setRotationY] = useState(4.2); // 偏角：使中国/欧亚大陆率先面向用户
-  const [rotationX, setRotationX] = useState(0.2); // 黄金仰角，俯视立体感
+  // 旋转角度
+  const [rotationY, setRotationY] = useState(4.2);
+  const [rotationX, setRotationX] = useState(0.2);
   const [isHovered, setIsHovered] = useState(false);
   const [dimensions, setDimensions] = useState({ width: 500, height: 500 });
 
-  // 2. 拖拽及实时角度引用 (避免 60fps 重绘闭包里的 State 获取延迟)
+  // 拖拽引用
   const isDraggingRef = useRef(false);
   const lastMouseXRef = useRef(0);
   const lastMouseYRef = useRef(0);
@@ -37,7 +37,7 @@ export default function Globe({
   // 粒子集
   const [globeDots, setGlobeDots] = useState<GlobePoint[]>([]);
 
-  // 3. 自适应容器容器缩放（防崩塌）
+  // 容器尺寸自适应
   useEffect(() => {
     if (!containerRef.current) return;
     const observer = new ResizeObserver((entries) => {
@@ -51,205 +51,98 @@ export default function Globe({
     return () => observer.disconnect();
   }, []);
 
-  // 4. 程序化世界微雕网格生成（高精自载矢量坐标）
+  // 生成粒子（修复版）
   useEffect(() => {
-    const mapW = 180;
-    const mapH = 90;
+    const mapW = 360;   // 提高经度分辨率
+    const mapH = 180;   // 提高纬度分辨率
     const offCanvas = document.createElement("canvas");
     offCanvas.width = mapW;
     offCanvas.height = mapH;
     const offCtx = offCanvas.getContext("2d");
-
     if (!offCtx) return;
 
-    // 内置全球七大洲主要大陆高还原解构算法（确保离线 100% 跑通）
-    const drawLandContour = (ctx: CanvasRenderingContext2D) => {
-      ctx.fillStyle = "#000000";
-      ctx.fillRect(0, 0, mapW, mapH);
-      ctx.fillStyle = "#ffffff";
+    // 绘制陆地（白色）
+    offCtx.fillStyle = "#000000";
+    offCtx.fillRect(0, 0, mapW, mapH);
+    offCtx.fillStyle = "#ffffff";
 
-      // 北美洲区域包络线
-      ctx.beginPath();
-      ctx.moveTo(mapW * 0.08, mapH * 0.15);
-      ctx.lineTo(mapW * 0.28, mapH * 0.12);
-      ctx.lineTo(mapW * 0.32, mapH * 0.18);
-      ctx.lineTo(mapW * 0.28, mapH * 0.45);
-      ctx.lineTo(mapW * 0.22, mapH * 0.45);
-      ctx.lineTo(mapW * 0.12, mapH * 0.35);
-      ctx.closePath();
-      ctx.fill();
-
-      // 格陵兰岛
-      ctx.beginPath();
-      ctx.ellipse(mapW * 0.35, mapH * 0.12, mapW * 0.04, mapH * 0.05, 0.2, 0, Math.PI * 2);
-      ctx.fill();
-
-      // 南美洲区域包络线
-      ctx.beginPath();
-      ctx.moveTo(mapW * 0.25, mapH * 0.43);
-      ctx.lineTo(mapW * 0.32, mapH * 0.45);
-      ctx.lineTo(mapW * 0.28, mapH * 0.78);
-      ctx.lineTo(mapW * 0.24, mapH * 0.65);
-      ctx.lineTo(mapW * 0.22, mapH * 0.50);
-      ctx.closePath();
-      ctx.fill();
-
-      // 非洲板块
-      ctx.beginPath();
-      ctx.moveTo(mapW * 0.46, mapH * 0.35);
-      ctx.lineTo(mapW * 0.58, mapH * 0.35);
-      ctx.lineTo(mapW * 0.64, mapH * 0.48);
-      ctx.lineTo(mapW * 0.58, mapH * 0.75);
-      ctx.lineTo(mapW * 0.48, mapH * 0.55);
-      ctx.closePath();
-      ctx.fill();
-
-      // 欧亚大陆超巨板块
-      ctx.beginPath();
-      ctx.moveTo(mapW * 0.45, mapH * 0.25);
-      ctx.lineTo(mapW * 0.55, mapH * 0.15);
-      ctx.lineTo(mapW * 0.75, mapH * 0.10);
-      ctx.lineTo(mapW * 0.90, mapH * 0.15);
-      ctx.lineTo(mapW * 0.88, mapH * 0.42);
-      ctx.lineTo(mapW * 0.82, mapH * 0.45);
-      ctx.lineTo(mapW * 0.74, mapH * 0.45);
-      ctx.lineTo(mapW * 0.64, mapH * 0.42);
-      ctx.lineTo(mapW * 0.52, mapH * 0.38);
-      ctx.closePath();
-      ctx.fill();
-
-      // 澳大利亚板块
-      ctx.beginPath();
-      ctx.ellipse(mapW * 0.82, mapH * 0.65, mapW * 0.06, mapH * 0.05, -0.1, 0, Math.PI * 2);
-      ctx.fill();
-      
-      // 不列颠与日本列岛微雕
-      ctx.beginPath();
-      ctx.ellipse(mapW * 0.45, mapH * 0.22, mapW * 0.015, mapH * 0.02, -0.4, 0, Math.PI * 2);
-      ctx.ellipse(mapW * 0.40, mapH * 0.16, mapW * 0.01, mapH * 0.01, 0, 0, Math.PI * 2);
-      ctx.ellipse(mapW * 0.89, mapH * 0.30, mapW * 0.012, mapH * 0.025, 0.4, 0, Math.PI * 2);
-      ctx.fill();
+    // 更精确的陆地轮廓（简化的多边形，覆盖主要大陆）
+    const drawContinent = (points: [number, number][]) => {
+      offCtx.beginPath();
+      const first = points[0];
+      offCtx.moveTo((first[0] + 180) / 360 * mapW, (90 - first[1]) / 180 * mapH);
+      for (let i = 1; i < points.length; i++) {
+        offCtx.lineTo((points[i][0] + 180) / 360 * mapW, (90 - points[i][1]) / 180 * mapH);
+      }
+      offCtx.closePath();
+      offCtx.fill();
     };
 
-    drawLandContour(offCtx);
+    // 非洲
+    drawContinent([
+      [-20, 35], [15, 35], [25, 5], [12, -35], [-10, -35], [-20, 5], [-20, 35]
+    ]);
+    // 欧亚大陆
+    drawContinent([
+      [30, 70], [60, 70], [100, 65], [130, 45], [120, 20], [70, 15], [40, 25], [30, 70]
+    ]);
+    // 北美洲
+    drawContinent([
+      [-170, 60], [-100, 60], [-80, 30], [-100, 15], [-130, 15], [-170, 30], [-170, 60]
+    ]);
+    // 南美洲
+    drawContinent([
+      [-80, 10], [-35, 10], [-40, -40], [-70, -40], [-80, 10]
+    ]);
+    // 澳大利亚
+    drawContinent([
+      [110, -10], [155, -10], [155, -35], [110, -35], [110, -10]
+    ]);
+    // 南极洲
+    drawContinent([
+      [-180, -82], [-120, -82], [-60, -82], [0, -82], [60, -82], [120, -82], [180, -82], [180, -70], [-180, -70]
+    ]);
 
-    const generateDots = () => {
-      const imgData = offCtx.getImageData(0, 0, mapW, mapH);
-      const pixels = imgData.data;
-      const dotsPool: GlobePoint[] = [];
+    // 扫描像素生成粒子
+    const imgData = offCtx.getImageData(0, 0, mapW, mapH);
+    const pixels = imgData.data;
+    const dotsPool: GlobePoint[] = [];
 
-      // 纬度/经度渲染密度步长
-      const latStep = 2.4; 
-      const lonStep = 2.8;
+    // 步长 2 度（密度适中）
+    const latStep = 2;
+    const lonStep = 2;
 
-      for (let lat = -80; lat <= 80; lat += latStep) {
-        const radLat = (lat * Math.PI) / 180;
-        const numPointsOnParallel = Math.ceil(360 / lonStep * Math.cos(radLat));
-        if (numPointsOnParallel < 3) continue;
+    for (let lat = -80; lat <= 80; lat += latStep) {
+      const radLat = (lat * Math.PI) / 180;
+      const cosLat = Math.cos(radLat);
+      // 根据纬度调整经度步长，保持点距均匀
+      let numLon = Math.max(12, Math.floor(360 / lonStep * cosLat));
+      if (numLon % 2 !== 0) numLon++;
+      const stepLon = 360 / numLon;
 
-        const currentLonStep = 360 / numPointsOnParallel;
-
-        for (let i = 0; i < numPointsOnParallel; i++) {
-          const lon = -180 + i * currentLonStep;
-          const u = Math.floor(((lon + 180) / 360) * mapW);
-          const v = Math.floor(((90 - lat) / 180) * mapH);
-          
-          if (u >= 0 && u < mapW && v >= 0 && v < mapH) {
-            const idx = (v * mapW + u) * 4;
-            if (pixels[idx] > 100) {
-              const radLon = (lon * Math.PI) / 180;
-              // 3D 球面参数方程映射
-              const x = Math.cos(radLat) * Math.sin(radLon);
-              const y = -Math.sin(radLat);
-              const z = Math.cos(radLat) * Math.cos(radLon);
-
-              dotsPool.push({
-                x, y, z,
-                px: 0, py: 0, pz: 0,
-                opacity: 0
-              });
-            }
+      for (let i = 0; i < numLon; i++) {
+        let lon = -180 + i * stepLon;
+        const u = Math.floor(((lon + 180) / 360) * mapW);
+        const v = Math.floor(((90 - lat) / 180) * mapH);
+        if (u >= 0 && u < mapW && v >= 0 && v < mapH) {
+          const idx = (v * mapW + u) * 4;
+          // 检测白色（陆地）
+          if (pixels[idx] > 200) {
+            const radLon = (lon * Math.PI) / 180;
+            const x = Math.cos(radLat) * Math.sin(radLon);
+            const y = -Math.sin(radLat);
+            const z = Math.cos(radLat) * Math.cos(radLon);
+            dotsPool.push({ x, y, z, px: 0, py: 0, pz: 0, opacity: 0 });
           }
         }
       }
-      setGlobeDots(dotsPool);
-      return dotsPool.length;
-    };
+    }
 
-    const initialDotsCount = generateDots();
-    console.log(`Initialized offline vector globe with ${initialDotsCount} dots.`);
-
-    // 尝试拉取超清真实地理轮廓，使用安全的临时 Canvas 进行解析，即使加载失败或存在 CORS/色彩方案问题，也绝不覆盖本地高质量矢量轮廓
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.src = "https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/World_map_blank_black_white.png/320px-World_map_blank_black_white.png";
-    
-    img.onload = () => {
-      try {
-        const tempCanvas = document.createElement("canvas");
-        tempCanvas.width = mapW;
-        tempCanvas.height = mapH;
-        const tempCtx = tempCanvas.getContext("2d");
-        if (!tempCtx) return;
-
-        tempCtx.drawImage(img, 0, 0, mapW, mapH);
-        const imgData = tempCtx.getImageData(0, 0, mapW, mapH);
-        const pixels = imgData.data;
-        const dotsPool: GlobePoint[] = [];
-
-        const latStep = 2.4; 
-        const lonStep = 2.8;
-
-        for (let lat = -80; lat <= 80; lat += latStep) {
-          const radLat = (lat * Math.PI) / 180;
-          const numPointsOnParallel = Math.ceil(360 / lonStep * Math.cos(radLat));
-          if (numPointsOnParallel < 3) continue;
-
-          const currentLonStep = 360 / numPointsOnParallel;
-
-          for (let i = 0; i < numPointsOnParallel; i++) {
-            const lon = -180 + i * currentLonStep;
-            const u = Math.floor(((lon + 180) / 360) * mapW);
-            const v = Math.floor(((90 - lat) / 180) * mapH);
-            
-            if (u >= 0 && u < mapW && v >= 0 && v < mapH) {
-              const idx = (v * mapW + u) * 4;
-              // 兼容亮色陆地
-              const isBright = pixels[idx] > 100 || pixels[idx+1] > 100 || pixels[idx+2] > 100;
-              if (isBright) {
-                const radLon = (lon * Math.PI) / 180;
-                const x = Math.cos(radLat) * Math.sin(radLon);
-                const y = -Math.sin(radLat);
-                const z = Math.cos(radLat) * Math.cos(radLon);
-
-                dotsPool.push({
-                  x, y, z,
-                  px: 0, py: 0, pz: 0,
-                  opacity: 0
-                });
-              }
-            }
-          }
-        }
-
-        // 只有当解析出的粒子数足够多（证明地图加载且解析无误，通常 > 200 个）时才应用
-        if (dotsPool.length > 200) {
-          setGlobeDots(dotsPool);
-          console.log(`Successfully updated globe with ${dotsPool.length} dots from Loaded Map.`);
-        } else {
-          console.warn("Loaded image produced too few dots, retaining high-quality vector fallback.");
-        }
-      } catch (e) {
-        console.warn("World Map contour fell back to vector generation due to CORS:", e);
-      }
-    };
-
-    img.onerror = () => {
-      console.warn("World Map image failed to load, securely fell back to local vector map.");
-    };
+    console.log(`🌍 Generated ${dotsPool.length} globe dots`);
+    setGlobeDots(dotsPool);
   }, []);
 
-  // 5. 核心 3D 渲染帧循环（包含 Z-buffer 深度前后遮挡排序）
+  // 渲染循环（与之前相同，保留所有交互）
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -261,7 +154,6 @@ export default function Globe({
 
     const render = () => {
       ctx.clearRect(0, 0, dimensions.width, dimensions.height);
-
       const cx = dimensions.width / 2;
       const cy = dimensions.height / 2;
       const globeRadius = dimensions.width * 0.43;
@@ -269,9 +161,9 @@ export default function Globe({
       let rotY = rotationYRef.current;
       let rotX = rotationXRef.current;
 
-      // 悬停时停止自转，非悬停、非拖拽时轻缓自转
+      // 自转：未拖拽且未悬停时
       if (!isDraggingRef.current && !isHovered) {
-        rotY += 0.0018; 
+        rotY += 0.0018;
         setRotationY(rotY);
       }
 
@@ -282,7 +174,7 @@ export default function Globe({
 
       pulseTime += 0.035;
 
-      // 绘制球体背后暗光晕，塑造视差厚重感
+      // 背景光晕
       const depthGlow = ctx.createRadialGradient(cx, cy, globeRadius * 0.1, cx, cy, globeRadius * 1.1);
       depthGlow.addColorStop(0, "#080c18");
       depthGlow.addColorStop(0.5, "#04070e");
@@ -292,36 +184,31 @@ export default function Globe({
       ctx.arc(cx, cy, globeRadius, 0, Math.PI * 2);
       ctx.fill();
 
+      // 投影所有粒子
       const projectedDots: GlobePoint[] = [];
-      const len = globeDots.length;
-
-      for (let i = 0; i < len; i++) {
+      for (let i = 0; i < globeDots.length; i++) {
         const dot = globeDots[i];
-        
-        // Y 轴自转
-        const rx1 = dot.x * cosY - dot.z * sinY;
-        const ry1 = dot.y;
-        const rz1 = dot.x * sinY + dot.z * cosY;
+        // Y轴旋转
+        let rx = dot.x * cosY - dot.z * sinY;
+        let rz = dot.x * sinY + dot.z * cosY;
+        let ry = dot.y;
+        // X轴旋转
+        let finalX = rx;
+        let finalY = ry * cosX - rz * sinX;
+        let finalZ = ry * sinX + rz * cosX;
 
-        // X 轴偏移
-        const rx2 = rx1;
-        const ry2 = ry1 * cosX - rz1 * sinX;
-        const rz2 = ry1 * sinX + rz1 * cosX;
-
-        const px = cx + rx2 * globeRadius;
-        const py = cy + ry2 * globeRadius;
-        
+        const px = cx + finalX * globeRadius;
+        const py = cy + finalY * globeRadius;
         projectedDots.push({
-          x: dot.x, y: dot.y, z: dot.z,
-          px, py, pz: rz2,
-          opacity: rz2 > 0 ? (0.2 + rz2 * 0.4) : (0.05 + (1 + rz2) * 0.05) 
+          ...dot,
+          px, py, pz: finalZ,
+          opacity: finalZ > 0 ? 0.3 + finalZ * 0.5 : 0.05,
         });
       }
 
-      // 5.1 绘制 背面 陆地粒子 (pz <= 0，虚化渲染)
+      // 背面粒子（暗色）
       ctx.fillStyle = "rgba(75, 85, 99, 0.15)";
-      for (let i = 0; i < projectedDots.length; i++) {
-        const pd = projectedDots[i];
+      for (const pd of projectedDots) {
         if (pd.pz <= 0) {
           ctx.beginPath();
           ctx.arc(pd.px, pd.py, 0.7 * (1.2 + pd.pz), 0, Math.PI * 2);
@@ -329,108 +216,91 @@ export default function Globe({
         }
       }
 
-      // 地球完美切面光环
-      ctx.strokeStyle = "rgba(148, 163, 184, 0.08)";
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.arc(cx, cy, globeRadius, 0, Math.PI * 2);
-      ctx.stroke();
-
-      // 5.2 绘制 正面 陆地粒子 (pz > 0，亮色渲染)
-      for (let i = 0; i < projectedDots.length; i++) {
-        const pd = projectedDots[i];
+      // 正面粒子（亮色）
+      for (const pd of projectedDots) {
         if (pd.pz > 0) {
-          ctx.fillStyle = `rgba(186, 230, 253, ${pd.opacity * 0.8})`;
+          ctx.fillStyle = `rgba(186, 230, 253, ${pd.opacity * 0.9})`;
           ctx.beginPath();
-          ctx.arc(pd.px, pd.py, 1.1 * (1.1 + pd.pz), 0, Math.PI * 2);
+          ctx.arc(pd.px, pd.py, 1.0 * (1.0 + pd.pz), 0, Math.PI * 2);
           ctx.fill();
         }
       }
 
-      // 5.3 绘制城市波纹及高定标签
+      // 绘制城市标记（与原始代码相同，保留完整交互）
       CITIES_DATA.forEach((city) => {
         const radLat = (city.lat * Math.PI) / 180;
         const radLon = (city.lon * Math.PI) / 180;
+        let x0 = Math.cos(radLat) * Math.sin(radLon);
+        let y0 = -Math.sin(radLat);
+        let z0 = Math.cos(radLat) * Math.cos(radLon);
+        // 旋转
+        let rx = x0 * cosY - z0 * sinY;
+        let rz = x0 * sinY + z0 * cosY;
+        let ry = y0;
+        let fx = rx;
+        let fy = ry * cosX - rz * sinX;
+        let fz = ry * sinX + rz * cosX;
 
-        const cx3d = Math.cos(radLat) * Math.sin(radLon);
-        const cy3d = -Math.sin(radLat);
-        const cz3d = Math.cos(radLat) * Math.cos(radLon);
+        if (fz <= 0.05) return;
 
-        const crx1 = cx3d * cosY - cz3d * sinY;
-        const cry1 = cy3d;
-        const crz1 = cx3d * sinY + cz3d * cosY;
+        const pinX = cx + fx * globeRadius;
+        const pinY = cy + fy * globeRadius;
 
-        const crx2 = crx1;
-        const cry2 = cry1 * cosX - crz1 * sinX;
-        const crz2 = cry1 * sinX + crz1 * cosX;
+        const isActive = city.id === activeCityId;
+        const isHover = city.id === hoveredCityId;
 
-        // 如果城市坐标旋转至背面（大于球体切面），则不再渲染
-        if (crz2 <= 0.05) return;
-
-        const pinX = cx + crx2 * globeRadius;
-        const pinY = cy + cry2 * globeRadius;
-
-        const isCityActive = city.id === activeCityId;
-        const isCityHovered = city.id === hoveredCityId;
-
-        // 呼吸效果多层波纹
-        const rippleCount = 3;
-        for (let r = 0; r < rippleCount; r++) {
-          const rSpeed = 0.015;
-          const rPhase = (pulseTime * rSpeed + r / rippleCount) % 1;
-          const rRadius = 8 + rPhase * 26;
-          const rOpacity = (1 - rPhase) * (isCityActive || isCityHovered ? 0.8 : 0.3);
-
-          ctx.strokeStyle = isCityActive || isCityHovered ? `rgba(212, 175, 55, ${rOpacity})` : `rgba(56, 189, 248, ${rOpacity})`;
+        // 波纹
+        for (let r = 0; r < 3; r++) {
+          const phase = (pulseTime * 0.015 + r / 3) % 1;
+          const rad = 8 + phase * 26;
+          const opacity = (1 - phase) * (isActive || isHover ? 0.8 : 0.3);
+          ctx.strokeStyle = isActive || isHover ? `rgba(212, 175, 55, ${opacity})` : `rgba(56, 189, 248, ${opacity})`;
           ctx.lineWidth = 1;
           ctx.beginPath();
-          ctx.arc(pinX, pinY, rRadius, 0, Math.PI * 2);
+          ctx.arc(pinX, pinY, rad, 0, Math.PI * 2);
           ctx.stroke();
         }
 
-        // 中心高质感金球
-        ctx.fillStyle = isCityActive || isCityHovered ? "#d4af37" : "#e0f2fe";
+        // 中心点
+        ctx.fillStyle = isActive || isHover ? "#d4af37" : "#e0f2fe";
         ctx.beginPath();
         ctx.arc(pinX, pinY, 4, 0, Math.PI * 2);
         ctx.fill();
-
         ctx.strokeStyle = "#ffffff";
         ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.arc(pinX, pinY, 6, 0, Math.PI * 2);
         ctx.stroke();
 
-        // 东方经典斜折标引线
+        // 引线
         ctx.strokeStyle = "rgba(212, 175, 55, 0.4)";
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(pinX, pinY);
-        const angleDir = pinX > cx ? 1 : -1;
-        ctx.lineTo(pinX + angleDir * 18, pinY - 14);
-        ctx.lineTo(pinX + angleDir * 50, pinY - 14);
+        const dir = pinX > cx ? 1 : -1;
+        ctx.lineTo(pinX + dir * 18, pinY - 14);
+        ctx.lineTo(pinX + dir * 50, pinY - 14);
         ctx.stroke();
 
-        // 标签文字
+        // 文字
         ctx.font = "normal 14px sans-serif";
-        ctx.fillStyle = isCityActive || isCityHovered ? "#d4af37" : "#f8fafc";
-        ctx.textAlign = angleDir === 1 ? "left" : "right";
+        ctx.fillStyle = isActive || isHover ? "#d4af37" : "#f8fafc";
+        ctx.textAlign = dir === 1 ? "left" : "right";
         ctx.textBaseline = "bottom";
-        
-        ctx.fillText(city.nameCn, pinX + angleDir * 55, pinY - 16);
+        ctx.fillText(city.nameCn, pinX + dir * 55, pinY - 16);
         ctx.font = "500 11px monospace";
         ctx.fillStyle = "rgba(148, 163, 184, 0.85)";
-        ctx.fillText(city.nameEn, pinX + angleDir * 55, pinY - 4);
+        ctx.fillText(city.nameEn, pinX + dir * 55, pinY - 4);
       });
 
       animFrameId = requestAnimationFrame(render);
     };
 
     render();
-
-    return () => { cancelAnimationFrame(animFrameId); };
+    return () => cancelAnimationFrame(animFrameId);
   }, [globeDots, dimensions, activeCityId, hoveredCityId, isHovered]);
 
-  // 6. 捕捉拖拽与坐标定位
+  // 鼠标事件（与原始相同）
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     isDraggingRef.current = true;
     lastMouseXRef.current = e.clientX;
@@ -438,68 +308,57 @@ export default function Globe({
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
+    if (!canvasRef.current) return;
+    const rect = canvasRef.current.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
 
     if (!isDraggingRef.current) {
+      // 悬停检测
       const cx = dimensions.width / 2;
       const cy = dimensions.height / 2;
-      const globeRadius = dimensions.width * 0.43;
+      const radius = dimensions.width * 0.43;
+      const rotY = rotationYRef.current;
+      const rotX = rotationXRef.current;
+      const cosY = Math.cos(rotY);
+      const sinY = Math.sin(rotY);
+      const cosX = Math.cos(rotX);
+      const sinX = Math.sin(rotX);
 
-      const cosY = Math.cos(rotationYRef.current);
-      const sinY = Math.sin(rotationYRef.current);
-      const cosX = Math.cos(rotationXRef.current);
-      const sinX = Math.sin(rotationXRef.current);
-
-      let foundHoverId: string | null = null;
-
-      for (let i = 0; i < CITIES_DATA.length; i++) {
-        const city = CITIES_DATA[i];
+      let found: string | null = null;
+      for (const city of CITIES_DATA) {
         const radLat = (city.lat * Math.PI) / 180;
         const radLon = (city.lon * Math.PI) / 180;
-
-        const cx3d = Math.cos(radLat) * Math.sin(radLon);
-        const cy3d = -Math.sin(radLat);
-        const cz3d = Math.cos(radLat) * Math.cos(radLon);
-
-        const crx1 = cx3d * cosY - cz3d * sinY;
-        const cry1 = cy3d;
-        const crz1 = cx3d * sinY + cz3d * cosY;
-
-        const crx2 = crx1;
-        const cry2 = cry1 * cosX - crz1 * sinX;
-        const crz2 = cry1 * sinX + crz1 * cosX;
-
-        if (crz2 > 0.05) {
-          const pinX = cx + crx2 * globeRadius;
-          const pinY = cy + cry2 * globeRadius;
-          const dx = mouseX - pinX;
-          const dy = mouseY - pinY;
-          const distance = Math.sqrt(dx * dx + dy * dy);
-
-          // 宽容触发范围（16像素热区检测）
-          if (distance <= 16) {
-            foundHoverId = city.id;
+        let x0 = Math.cos(radLat) * Math.sin(radLon);
+        let y0 = -Math.sin(radLat);
+        let z0 = Math.cos(radLat) * Math.cos(radLon);
+        let rx = x0 * cosY - z0 * sinY;
+        let rz = x0 * sinY + z0 * cosY;
+        let ry = y0;
+        let fx = rx;
+        let fy = ry * cosX - rz * sinX;
+        let fz = ry * sinX + rz * cosX;
+        if (fz > 0.05) {
+          const px = cx + fx * radius;
+          const py = cy + fy * radius;
+          const dx = mouseX - px;
+          const dy = mouseY - py;
+          if (Math.hypot(dx, dy) <= 16) {
+            found = city.id;
             break;
           }
         }
       }
-      onHoverCity(foundHoverId);
+      onHoverCity(found);
     } else {
       const deltaX = e.clientX - lastMouseXRef.current;
       const deltaY = e.clientY - lastMouseYRef.current;
-
-      const speedFactor = 0.005;
-      const nextRotY = rotationYRef.current + deltaX * speedFactor;
-      // 仰俯角上限控制在 90 度内，防极点穿透翻转
-      const nextRotX = Math.max(-Math.PI / 2.5, Math.min(Math.PI / 2.5, rotationXRef.current + deltaY * speedFactor));
-
-      setRotationY(nextRotY);
-      setRotationX(nextRotX);
-
+      const speed = 0.005;
+      let newY = rotationYRef.current + deltaX * speed;
+      let newX = rotationXRef.current + deltaY * speed;
+      newX = Math.max(-Math.PI / 2.5, Math.min(Math.PI / 2.5, newX));
+      setRotationY(newY);
+      setRotationX(newX);
       lastMouseXRef.current = e.clientX;
       lastMouseYRef.current = e.clientY;
     }
@@ -508,46 +367,35 @@ export default function Globe({
   const handleMouseUp = () => { isDraggingRef.current = false; };
 
   const handleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
+    if (!canvasRef.current) return;
+    const rect = canvasRef.current.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
-
     const cx = dimensions.width / 2;
     const cy = dimensions.height / 2;
-    const globeRadius = dimensions.width * 0.43;
-
-    const cosY = Math.cos(rotationYRef.current);
-    const sinY = Math.sin(rotationYRef.current);
-    const cosX = Math.cos(rotationXRef.current);
-    const sinX = Math.sin(rotationXRef.current);
-
-    for (let i = 0; i < CITIES_DATA.length; i++) {
-      const city = CITIES_DATA[i];
+    const radius = dimensions.width * 0.43;
+    const rotY = rotationYRef.current;
+    const rotX = rotationXRef.current;
+    const cosY = Math.cos(rotY);
+    const sinY = Math.sin(rotY);
+    const cosX = Math.cos(rotX);
+    const sinX = Math.sin(rotX);
+    for (const city of CITIES_DATA) {
       const radLat = (city.lat * Math.PI) / 180;
       const radLon = (city.lon * Math.PI) / 180;
-
-      const cx3d = Math.cos(radLat) * Math.sin(radLon);
-      const cy3d = -Math.sin(radLat);
-      const cz3d = Math.cos(radLat) * Math.cos(radLon);
-
-      const crx1 = cx3d * cosY - cz3d * sinY;
-      const cry1 = cy3d;
-      const crz1 = cx3d * sinY + cz3d * cosY;
-
-      const crx2 = crx1;
-      const cry2 = cry1 * cosX - crz1 * sinX;
-      const crz2 = cry1 * sinX + crz1 * cosX;
-
-      if (crz2 > 0.05) {
-        const pinX = cx + crx2 * globeRadius;
-        const pinY = cy + cry2 * globeRadius;
-        const dx = mouseX - pinX;
-        const dy = mouseY - pinY;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-
-        if (distance <= 16) {
+      let x0 = Math.cos(radLat) * Math.sin(radLon);
+      let y0 = -Math.sin(radLat);
+      let z0 = Math.cos(radLat) * Math.cos(radLon);
+      let rx = x0 * cosY - z0 * sinY;
+      let rz = x0 * sinY + z0 * cosY;
+      let ry = y0;
+      let fx = rx;
+      let fy = ry * cosX - rz * sinX;
+      let fz = ry * sinX + rz * cosX;
+      if (fz > 0.05) {
+        const px = cx + fx * radius;
+        const py = cy + fy * radius;
+        if (Math.hypot(mouseX - px, mouseY - py) <= 16) {
           onSelectCity(city.id);
           break;
         }
