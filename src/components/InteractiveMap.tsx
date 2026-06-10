@@ -3,6 +3,14 @@ import createGlobe from 'cobe';
 import { motion, AnimatePresence } from 'motion/react';
 import { BRANDS, Brand } from '../constants';
 
+interface MapPoint {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  brands: Brand[];
+}
+
 interface InteractiveMapProps {
   onBrandClick?: (brandId: string) => void;
 }
@@ -41,22 +49,20 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
       height: 800 * 2,
       phi: 0,
       theta: 0.3,
-      dark: 0,                       // 关键：0 = 全亮，显示真实地图纹理
+      dark: 1,
       diffuse: 1.2,
-      mapSamples: 24000,
+      mapSamples: 16000,
       mapBrightness: 6,
-      baseColor: [0.2, 0.3, 0.6],    // 海洋基底色（纹理未覆盖区域）
-      markerColor: [0.77, 0.63, 0.35], // 金色标记点
-      glowColor: [0.3, 0.5, 0.8],    // 发光色（明亮蓝色）
-      // 强制指定可用的地图纹理（使用 jsdelivr CDN，保证大陆轮廓清晰）
-      map: 'https://cdn.jsdelivr.net/npm/cobe@0.6.3/map.jpg',
+      baseColor: [0.04, 0.07, 0.16], // brand-navy
+      markerColor: [0.77, 0.63, 0.35], // brand-gold
+      glowColor: [0.04, 0.07, 0.16],
       markers: [],
       onRender: (state) => {
-        // 只有在没有用户拖拽且未暂停时，自动旋转
-        if (!pointerInteracting.current && !isPausedRef.current) {
-          phiRef.current += 0.004;
+        if (!pointerInteracting.current) {
+          if (!isPausedRef.current) {
+            phiRef.current += 0.005;
+          }
         }
-        // 应用累积的旋转角度 + 拖拽偏移
         state.phi = phiRef.current + pointerInteractionMovement.current;
         setRotation(state.phi);
       },
@@ -71,7 +77,10 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
   const handlePointerDown = (e: React.PointerEvent) => {
     pointerInteracting.current = e.clientX;
     canvasRef.current!.style.cursor = 'grabbing';
-    if (pauseTimeoutRef.current) clearTimeout(pauseTimeoutRef.current);
+    
+    if (pauseTimeoutRef.current) {
+      clearTimeout(pauseTimeoutRef.current);
+    }
     isPausedRef.current = true;
   };
 
@@ -82,6 +91,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
     }
     pointerInteracting.current = null;
     canvasRef.current!.style.cursor = 'grab';
+    
     if (pauseTimeoutRef.current) clearTimeout(pauseTimeoutRef.current);
     pauseTimeoutRef.current = setTimeout(() => {
       isPausedRef.current = false;
@@ -96,7 +106,9 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
   };
 
   const handleMouseEnterMarker = () => {
-    if (pauseTimeoutRef.current) clearTimeout(pauseTimeoutRef.current);
+    if (pauseTimeoutRef.current) {
+      clearTimeout(pauseTimeoutRef.current);
+    }
     isPausedRef.current = true;
   };
 
@@ -107,15 +119,15 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
     }, 1500);
   };
 
-  // 根据经纬度计算在canvas上的投影位置（用于浮动标记）
   const getPointPosition = (lat: number, lng: number) => {
-    const r = 300; // 半径（与canvas尺寸匹配）
+    const r = 300; // Globe radius approximation
     const latRad = (lat * Math.PI) / 180;
-    // 注意：lng 需要减去当前地球自转的偏移量（rotation 是 phi 的弧度值）
     const lngRad = ((lng + (rotation * 180) / Math.PI) * Math.PI) / 180;
+    
     const x = r * Math.cos(latRad) * Math.sin(lngRad);
     const y = -r * Math.sin(latRad);
     const z = r * Math.cos(latRad) * Math.cos(lngRad);
+
     return { x, y, z };
   };
 
@@ -131,11 +143,12 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
         className="cursor-grab active:cursor-grabbing"
       />
 
-      {/* Brand Markers - 浮动在地球上方的品牌标记点 */}
+      {/* Brand Markers */}
       <div className="absolute inset-0 pointer-events-none">
         {HUBS.map((brand) => {
           const pos = getPointPosition(brand.lat, brand.lng);
-          const isFront = pos.z > 0; // z > 0 表示面向用户
+          const isFront = pos.z > 0;
+          
           return (
             <motion.div
               key={brand.id}
@@ -157,7 +170,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
                 onMouseEnter={handleMouseEnterMarker}
                 onMouseLeave={handleMouseLeaveMarker}
               >
-                {/* 城市标签 */}
+                {/* Geographic Label */}
                 <div className={`mb-2 px-2 py-0.5 bg-brand-navy/40 backdrop-blur-sm border border-white/10 rounded text-[8px] text-brand-gold uppercase tracking-widest whitespace-nowrap transition-transform duration-500 ${
                   brand.id === 'taoguafang' ? '-translate-x-4' : 
                   brand.id === 'hanyi' ? 'translate-x-4' : 
@@ -166,10 +179,11 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
                 }`}>
                   {BILINGUAL_LOCATIONS[brand.location] || brand.location}
                 </div>
-                {/* 标记圆点 */}
+
+                {/* Marker Dot (Solid, no glow) */}
                 <div className={`w-2.5 h-2.5 rounded-full transition-all duration-500 ${selectedCity === brand.location ? 'bg-white scale-125' : 'bg-brand-gold'}`} />
                 
-                {/* 点击后弹出的品牌详情面板 */}
+                {/* Tooltip / City Brands Panel */}
                 <AnimatePresence>
                   {selectedCity === brand.location && (
                     <motion.div
@@ -187,6 +201,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
                             {getBrandsInCity(brand.location).length} 个品牌
                           </span>
                         </div>
+                        
                         <div className="flex flex-col gap-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                           {getBrandsInCity(brand.location).map((cityBrand) => (
                             <div 
