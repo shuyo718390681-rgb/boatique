@@ -1,297 +1,205 @@
-import React, { useState } from "react";
-import Globe from "./Globe";
-import { CITIES_DATA } from "../data";
-import { Brand, CityMarker } from "../types";
-import { MapPin, Globe2, Sparkles, X, ArrowRight, Award, Compass, HelpCircle } from "lucide-react";
-import CraftThumbnail from "./CraftThumbnail";
+import React, { useEffect, useRef, useState } from 'react';
+import createGlobe from 'cobe';
+import { motion, AnimatePresence } from 'motion/react';
+import { BRANDS, Brand } from '../constants';
 
-export default function InteractiveMap() {
-  const [selectedCityId, setSelectedCityId] = useState<string | null>(null);
-  const [hoveredCityId, setHoveredCityId] = useState<string | null>(null);
-  const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null);
+interface InteractiveMapProps {
+  onBrandClick?: (brandId: string) => void;
+}
 
-  const selectedCity = CITIES_DATA.find((c) => c.id === selectedCityId);
+const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [selectedCity, setSelectedCity] = useState<string | null>(null);
+  const [rotation, setRotation] = useState(0);
+  
+  const pointerInteracting = useRef<number | null>(null);
+  const pointerInteractionMovement = useRef(0);
+  const isPausedRef = useRef(false);
+  const pauseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const phiRef = useRef(0);
 
-  const handleReset = () => {
-    setSelectedCityId(null);
-    setSelectedBrand(null);
+  // 从 BRANDS 中筛选出枢纽城市（示例：上海、宜兴、威尼斯、佛罗伦萨）
+  const HUB_IDS = ['hanyi', 'taoguafang', 'artedimurano', 'sarabyjg'];
+  const HUBS = BRANDS.filter(b => HUB_IDS.includes(b.id));
+
+  const BILINGUAL_LOCATIONS: Record<string, string> = {
+    'Shanghai': '上海 SHANGHAI',
+    'Yixing': '宜兴 YIXING',
+    'Venice': '威尼斯 VENICE',
+    'Florence': '佛罗伦萨 FLORENCE'
+  };
+
+  const getBrandsInCity = (city: string) => {
+    return BRANDS.filter(b => b.location === city);
+  };
+
+  useEffect(() => {
+    if (!canvasRef.current) return;
+
+    const globe = createGlobe(canvasRef.current, {
+      devicePixelRatio: 2,
+      width: 800 * 2,
+      height: 800 * 2,
+      phi: 0,
+      theta: 0.3,
+      dark: 0,
+      diffuse: 1.2,
+      mapSamples: 24000,
+      mapBrightness: 6,
+      baseColor: [0.2, 0.3, 0.6],
+      markerColor: [0.77, 0.63, 0.35],
+      glowColor: [0.3, 0.5, 0.8],
+      map: 'https://unpkg.com/cobe@0.6.3/map.jpg',
+      markers: [],
+      onRender: (state) => {
+        if (!pointerInteracting.current && !isPausedRef.current) {
+          phiRef.current += 0.004;
+        }
+        state.phi = phiRef.current + pointerInteractionMovement.current;
+        setRotation(state.phi);
+      },
+    });
+
+    return () => {
+      globe.destroy();
+      if (pauseTimeoutRef.current) clearTimeout(pauseTimeoutRef.current);
+    };
+  }, []);
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    pointerInteracting.current = e.clientX;
+    canvasRef.current!.style.cursor = 'grabbing';
+    if (pauseTimeoutRef.current) clearTimeout(pauseTimeoutRef.current);
+    isPausedRef.current = true;
+  };
+
+  const handlePointerUp = () => {
+    if (pointerInteracting.current !== null) {
+      phiRef.current += pointerInteractionMovement.current;
+      pointerInteractionMovement.current = 0;
+    }
+    pointerInteracting.current = null;
+    canvasRef.current!.style.cursor = 'grab';
+    if (pauseTimeoutRef.current) clearTimeout(pauseTimeoutRef.current);
+    pauseTimeoutRef.current = setTimeout(() => {
+      isPausedRef.current = false;
+    }, 2000);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (pointerInteracting.current !== null) {
+      const delta = e.clientX - pointerInteracting.current;
+      pointerInteractionMovement.current = delta / 200;
+    }
+  };
+
+  const getPointPosition = (lat: number, lng: number) => {
+    const r = 300;
+    const latRad = (lat * Math.PI) / 180;
+    const lngRad = ((lng + (rotation * 180) / Math.PI) * Math.PI) / 180;
+    const x = r * Math.cos(latRad) * Math.sin(lngRad);
+    const y = -r * Math.sin(latRad);
+    const z = r * Math.cos(latRad) * Math.cos(lngRad);
+    return { x, y, z };
   };
 
   return (
-    <div 
-      className="w-full flex flex-col items-center justify-center relative min-h-[500px]" 
-      id="interactive-map-page-wrapper"
-    >
-      {/* 顶部标题组 */}
-      <div className="w-full text-center mb-6 select-none z-10">
-        <span className="text-[10px] tracking-[0.3em] font-mono text-[#d4af37] font-bold block mb-1.5 uppercase">
-          CURATED GLOBAL BRAND ARCHIVE DIRECTORY
-        </span>
-        <h2 className="text-2xl md:text-3.5xl font-extrabold tracking-widest text-[#f8fafc] font-sans">
-          全球手工匠旅 · 品牌互动星图
-        </h2>
-        <div className="w-16 h-0.5 bg-gradient-to-r from-transparent via-[#d4af37] to-transparent mx-auto mt-2 rounded-full" />
-        <p className="text-slate-400 text-xs max-w-xl mx-auto mt-2.5 leading-relaxed font-sans">
-          拖拽并旋转 3D 地球仪，或点击下方名城；深探意大利佛罗伦萨、威尼斯、中国上海与绍兴等顶级非遗工研大作
-        </p>
-      </div>
-
-      <div className="w-full flex flex-col lg:flex-row items-center justify-center gap-6 relative z-10">
-        {/* 左偏自转触发栏 */}
-        <div 
-          className="w-full lg:w-64 flex flex-row lg:flex-col gap-2 overflow-x-auto lg:overflow-x-visible pb-2 lg:pb-0 shrink-0 custom-scrollbar select-none order-2 lg:order-1"
-          id="cities-rail-container"
-        >
-          <div className="hidden lg:flex items-center gap-2 mb-2 px-3 py-1 bg-slate-950/40 border border-slate-900 rounded-lg">
-            <Compass className="w-3.5 h-3.5 text-[#d4af37]" />
-            <span className="text-[10px] text-slate-500 font-mono font-bold tracking-wider uppercase">名匠联动捷径 RAIL</span>
-          </div>
-
-          {CITIES_DATA.map((city) => {
-            const isCityActive = city.id === selectedCityId;
-            const isCityHovered = city.id === hoveredCityId;
-
-            return (
-              <button
-                key={city.id}
-                onMouseEnter={() => setHoveredCityId(city.id)}
-                onMouseLeave={() => setHoveredCityId(null)}
-                onClick={() => {
-                  setSelectedCityId(city.id);
-                  if (selectedCityId !== city.id) {
-                    setSelectedBrand(null);
-                  }
-                }}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all duration-300 border shrink-0 cursor-pointer ${
-                  isCityActive
-                    ? "bg-[#d4af37]/10 border-[#d4af37] shadow-lg shadow-[#d4af37]/5"
-                    : isCityHovered
-                    ? "bg-slate-950 border-slate-800 text-slate-100"
-                    : "bg-[#070b16]/40 border-slate-900/60 text-slate-400"
-                }`}
-                id={`city-button-${city.id}`}
-              >
-                <div className={`p-1.5 rounded-md transition-colors ${
-                  isCityActive ? "bg-[#d4af37] text-black" : "bg-slate-900 text-[#d4af37]"
-                }`}>
-                  <MapPin className="w-3.5 h-3.5" />
-                </div>
-                <div>
-                  <div className={`text-xs font-bold font-sans transition-colors ${isCityActive ? "text-[#d4af37]" : "text-slate-200"}`}>
-                    {city.nameCn}
-                  </div>
-                  <div className="text-[9px] font-mono text-slate-500 font-medium tracking-wide uppercase mt-0.5">
-                    {city.nameEn}
-                  </div>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* 3D 拟态球体 viewport */}
-        <div 
-          className="flex-1 w-full max-w-[450px] md:max-w-[500px] aspect-square relative z-10 flex items-center justify-center order-1 lg:order-2" 
-          id="globe-container-viewport"
-        >
-          <div className="absolute w-[112%] h-[112%] border border-slate-900/15 rounded-full pointer-events-none" />
-          <div className="absolute w-[95%] h-[95%] border border-slate-900/10 rounded-full pointer-events-none" />
-          <div className="absolute w-[78%] h-[78%] border border-slate-900/5 rounded-full pointer-events-none" />
-
-          <Globe
-            activeCityId={selectedCityId}
-            onSelectCity={(cityId) => {
-              setSelectedCityId(cityId);
-              setSelectedBrand(null);
-            }}
-            hoveredCityId={hoveredCityId}
-            onHoverCity={(cityId) => setHoveredCityId(cityId)}
-          />
-
-          <div className="absolute bottom-2 right-4 flex items-center gap-1.5 bg-slate-950/60 border border-slate-900/60 px-2.5 py-1 rounded-full pointer-events-none select-none text-[9px] text-slate-500 font-mono">
-            <Globe2 className="w-3 h-3 text-[#d4af37]" />
-            <span>DRAG ROTATE · HOVER PIN · CLICK CITY</span>
-          </div>
-        </div>
-
-        {/* 右边抽屉板 */}
-        <div className="w-full lg:w-80 flex flex-col gap-4 shrink-0 order-3 z-20" id="map-detail-card-panel">
-          {selectedCity ? (
-            <div
-              className="w-full bg-[#070b16]/95 border border-slate-800 backdrop-blur-xl rounded-xl shadow-2xl shadow-black/90 overflow-hidden flex flex-col transition-all duration-300 animate-in fade-in slide-in-from-bottom-5"
-              id="brand-detail-sidebar"
+    <div className="relative w-full max-w-[800px] mx-auto aspect-square flex items-center justify-center">
+      <canvas
+        ref={canvasRef}
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+        onPointerOut={handlePointerUp}
+        onPointerMove={handlePointerMove}
+        style={{ width: '100%', height: '100%', display: 'block' }}
+        className="cursor-grab active:cursor-grabbing"
+      />
+      <div className="absolute inset-0 pointer-events-none">
+        {HUBS.map((brand) => {
+          const pos = getPointPosition(brand.lat, brand.lng);
+          const isFront = pos.z > 0;
+          return (
+            <motion.div
+              key={brand.id}
+              className="absolute pointer-events-auto -translate-x-1/2 -translate-y-1/2"
+              style={{ 
+                left: `calc(50% + ${pos.x}px)`, 
+                top: `calc(50% + ${pos.y}px)`,
+                zIndex: isFront ? 50 : 0
+              }}
+              initial={false}
+              animate={{ 
+                opacity: isFront ? 1 : 0,
+                scale: isFront ? 1 : 0.5,
+              }}
             >
-              <div className="h-1 bg-gradient-to-r from-transparent via-[#d4af37] to-transparent" />
-
-              <div className="px-5 py-4 flex items-center justify-between border-b border-slate-900 bg-slate-950/20">
-                <div>
-                  <span className="text-[9px] tracking-[0.25em] font-mono text-[#d4af37] uppercase font-bold block mb-0.5">
-                    名邦匠访 CURATED CITY
-                  </span>
-                  <h2 className="text-base font-bold font-sans text-slate-100 flex items-center gap-1">
-                    {selectedCity.nameCn}
-                  </h2>
+              <div 
+                className="relative group cursor-pointer flex flex-col items-center"
+                onClick={() => setSelectedCity(selectedCity === brand.location ? null : brand.location)}
+              >
+                <div className={`mb-2 px-2 py-0.5 bg-brand-navy/40 backdrop-blur-sm border border-white/10 rounded text-[8px] text-brand-gold uppercase tracking-widest whitespace-nowrap`}>
+                  {BILINGUAL_LOCATIONS[brand.location] || brand.location}
                 </div>
-                <div className="flex items-center space-x-2">
-                  <span className="text-[10px] font-mono text-slate-400 bg-slate-900 border border-slate-850 px-1.5 py-0.5 rounded">
-                    {selectedCity.brands.length} 席
-                  </span>
-                  <button
-                    onClick={handleReset}
-                    className="text-slate-400 hover:text-[#d4af37] p-1 rounded-full hover:bg-slate-900 transition-colors focus:outline-none cursor-pointer"
-                    aria-label="关闭"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="p-4 max-h-[320px] overflow-y-auto space-y-3 custom-scrollbar">
-                {selectedCity.brands.map((brand) => (
-                  <div
-                    key={brand.id}
-                    onClick={() => setSelectedBrand(brand)}
-                    className="group relative flex items-start gap-3 p-3 rounded-lg bg-slate-950/40 border border-slate-900 hover:bg-slate-950/80 hover:border-[#d4af37]/35 cursor-pointer transition-all duration-300"
-                    id={`sidebar-brand-item-${brand.id}`}
-                  >
-                    <CraftThumbnail type={brand.detailImage} />
-
-                    <div className="flex-1 min-w-0 pr-1 select-none">
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <span className="text-[8px] font-bold tracking-widest text-[#d4af37] bg-[#d4af37]/5 border border-[#d4af37]/20 px-1 py-0.5 rounded uppercase">
-                          {brand.category}
-                        </span>
-                        <span className="text-[8px] font-mono text-[#94a3b8] font-semibold">
-                          {brand.founded}
-                        </span>
+                <div className={`w-2.5 h-2.5 rounded-full transition-all duration-500 ${selectedCity === brand.location ? 'bg-white scale-125' : 'bg-brand-gold'}`} />
+                <AnimatePresence>
+                  {selectedCity === brand.location && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20, scale: 0.9 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 20, scale: 0.9 }}
+                      className="absolute bottom-full left-1/2 -translate-x-1/2 mb-8 w-[320px] glass-panel overflow-hidden rounded-2xl shadow-[0_30px_60px_rgba(0,0,0,0.5)] border border-white/20 z-[100]"
+                    >
+                      <div className="p-4 bg-brand-navy/90 backdrop-blur-md">
+                        <div className="flex items-center justify-between mb-4 border-b border-white/10 pb-2">
+                          <span className="text-[10px] text-brand-gold uppercase tracking-[0.2em] font-bold">
+                            {BILINGUAL_LOCATIONS[brand.location] || brand.location}
+                          </span>
+                          <span className="text-[9px] text-white/40">
+                            {getBrandsInCity(brand.location).length} 个品牌
+                          </span>
+                        </div>
+                        <div className="flex flex-col gap-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                          {getBrandsInCity(brand.location).map((cityBrand) => (
+                            <div 
+                              key={cityBrand.id} 
+                              className="group/item flex gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors cursor-pointer"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (onBrandClick) onBrandClick(cityBrand.id);
+                              }}
+                            >
+                              <div className="w-16 h-20 flex-shrink-0 overflow-hidden rounded-md border border-white/10">
+                                <img 
+                                  src={cityBrand.image} 
+                                  alt={cityBrand.name} 
+                                  className="w-full h-full object-cover grayscale group-hover/item:grayscale-0 transition-all duration-500"
+                                />
+                              </div>
+                              <div className="flex flex-col justify-center">
+                                <span className="text-[8px] text-brand-gold uppercase tracking-widest mb-1">
+                                  {cityBrand.category}
+                                </span>
+                                <h5 className="text-sm text-white mb-1 whitespace-pre-line">
+                                  {cityBrand.displayName || cityBrand.name}
+                                </h5>
+                                <p className="text-[9px] text-white/50 line-clamp-2 leading-relaxed">
+                                  {cityBrand.description}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                      <h3 className="text-xs font-bold text-slate-200 group-hover:text-[#d4af37] tracking-wider transition-colors duration-200">
-                        {brand.name}
-                      </h3>
-                      <p className="text-[10px] text-slate-400 mt-1 line-clamp-2 leading-relaxed">
-                        {brand.description}
-                      </p>
-                    </div>
-
-                    <div className="self-center flex items-center justify-center w-5 h-5 rounded-full bg-slate-900 border border-slate-850 group-hover:bg-[#d4af37] group-hover:border-[#d4af37] text-slate-400 group-hover:text-black transition-all duration-300 transform group-hover:translate-x-0.5">
-                      <ArrowRight className="w-2.5 h-2.5 stroke-[2.5]" />
-                    </div>
-                  </div>
-                ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
-
-              <div className="px-5 py-3.5 bg-slate-950/75 border-t border-slate-900/80 flex items-center justify-between text-[10px] text-slate-500 font-sans">
-                <span className="flex items-center gap-1">
-                  <Award className="w-3 h-3 text-[#d4af37]" />
-                  传承经典，东方风致与意国流光
-                </span>
-              </div>
-            </div>
-          ) : (
-            <div className="w-full bg-[#070b16]/30 border border-dashed border-slate-800/80 rounded-xl p-6 text-center flex flex-col items-center justify-center min-h-[160px] select-none">
-              <div className="w-10 h-10 rounded-full bg-slate-950/60 border border-slate-900 flex items-center justify-center text-slate-500 mb-3">
-                <HelpCircle className="w-5 h-5" />
-              </div>
-              <p className="text-xs text-slate-300 font-bold font-sans">
-                点击地球名城探索大师
-              </p>
-              <p className="text-[10px] text-slate-500 font-sans mt-1 max-w-[200px]">
-                名城连接着上海的盘扣大漆、绍兴红泥彩绘、以及佛罗伦萨植鞣皮与威尼斯吹璃
-              </p>
-            </div>
-          )}
-        </div>
+            </motion.div>
+          );
+        })}
       </div>
-
-      {/* 4. 具体品牌的手作故事大弹窗 */}
-      {selectedBrand && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in duration-300">
-          <div 
-            className="relative w-full max-w-lg bg-[#070b16] border border-slate-800 rounded-xl shadow-2xl shadow-black overflow-hidden flex flex-col max-h-[85vh]"
-            onClick={(e) => e.stopPropagation()}
-            id={`brand-story-modal-${selectedBrand.id}`}
-          >
-            <div className="h-1 bg-gradient-to-r from-[#d4af37]/40 via-[#d4af37] to-[#d4af37]/40" />
-
-            <div className="px-5 py-4 flex items-center justify-between border-b border-slate-900 bg-slate-950/30">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-[#d4af37] animate-pulse" />
-                <span className="text-[11px] font-mono text-[#d4af37] font-bold tracking-[0.2em] uppercase">手工绝艺档案 MASTERPIECE</span>
-              </div>
-              <button
-                onClick={() => setSelectedBrand(null)}
-                className="text-slate-400 hover:text-[#d4af37] p-1 rounded-full hover:bg-slate-900 transition-all cursor-pointer"
-                aria-label="关闭"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-6 space-y-5 custom-scrollbar">
-              <div className="border-b border-slate-900/60 pb-4">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <span className="text-[10px] uppercase tracking-widest bg-[#d4af37]/10 border border-[#d4af37]/30 text-[#d4af37] px-2 py-0.5 rounded font-bold">
-                    {selectedBrand.category}
-                  </span>
-                  <span className="text-xs font-mono text-slate-500">
-                    {selectedBrand.founded}
-                  </span>
-                </div>
-                <h3 className="text-xl font-bold tracking-widest text-[#f8fafc] font-sans">
-                  {selectedBrand.name}
-                </h3>
-                <p className="text-xs font-medium text-slate-400 mt-1">
-                  发源名邦: <span className="text-slate-300 font-mono text-[11px] font-semibold bg-slate-900 px-1.5 py-0.5 rounded ml-1 uppercase">{selectedBrand.origin}</span>
-                </p>
-              </div>
-
-              <div className="relative h-44 rounded-lg overflow-hidden bg-slate-950 flex items-center justify-center p-4 border border-slate-900">
-                <div className="absolute inset-0 bg-radial-gradient from-transparent to-black/80 pointer-events-none z-10" />
-                <div className="scale-[2.4] opacity-90 relative z-0">
-                  <CraftThumbnail type={selectedBrand.detailImage} />
-                </div>
-                
-                <div className="absolute bottom-3 left-3 z-20 flex items-center gap-1.5 bg-[#03050a]/80 border border-slate-900/80 px-2 py-0.5 rounded font-mono text-[9px] text-[#d4af37]">
-                  <Award className="w-3 h-3" />
-                  <span>PRECISE CRAFT IN DETAIL</span>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <h4 className="text-xs font-bold text-slate-400 tracking-wider mb-1.5 font-sans">
-                    核心匠造工艺 Core Craftsmanship
-                  </h4>
-                  <div className="p-3 rounded-lg bg-slate-950/80 border border-slate-900 text-xs text-slate-300 leading-relaxed italic text-center font-sans">
-                    "{selectedBrand.craftsmanship}"
-                  </div>
-                </div>
-
-                <div>
-                  <h4 className="text-xs font-bold text-slate-405 tracking-wider mb-1.5 font-sans">
-                    世代承袭长卷 Artisan Legacy
-                  </h4>
-                  <p className="text-xs md:text-[13px] text-slate-300 leading-relaxed font-sans text-justify">
-                    {selectedBrand.fullStory}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="px-6 py-4 bg-slate-950/60 border-t border-slate-900 flex items-center justify-between text-xs text-slate-400 font-sans">
-              <span className="text-[10px] text-slate-500 font-mono">
-                BOATICUE · SELECT HERITAGE
-              </span>
-              <button
-                onClick={() => setSelectedBrand(null)}
-                className="bg-[#d4af37] text-black font-bold px-4 py-1.5 rounded text-[11px] hover:bg-[#d4af37]/90 active:scale-95 transition-all cursor-pointer"
-              >
-                深谙此艺 Understood
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
-}
+};
+
+export default InteractiveMap;
