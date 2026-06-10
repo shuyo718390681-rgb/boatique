@@ -12,7 +12,6 @@ export default function InteractiveMap() {
 
   const selectedCity = CITIES_DATA.find((c) => c.id === selectedCityId);
 
-  // 快捷重置
   const handleReset = () => {
     setSelectedCityId(null);
     setSelectedBrand(null);
@@ -37,16 +36,16 @@ export default function InteractiveMap() {
         </p>
       </div>
 
-      {/* 主画布布局：左侧城市侧边栏、中间/主屏幕3D球体、右侧/浮动品牌展示卡 */}
+      {/* 主画布 */}
       <div className="w-full flex flex-col lg:flex-row items-center justify-center gap-6 relative z-10">
         
-        {/* 左边：名城联动捷径导引轨（Hover同步地球点位） */}
+        {/* 左边：名城捷径导轨 */}
         <div 
           className="w-full lg:w-64 flex flex-row lg:flex-col gap-2 overflow-x-auto lg:overflow-x-visible pb-2 lg:pb-0 shrink-0 custom-scrollbar select-none order-2 lg:order-1"
           id="cities-rail-container"
         >
           <div className="hidden lg:flex items-center gap-2 mb-2 px-3 py-1 bg-slate-950/40 border border-slate-900 rounded-lg">
-            <Compass className="w-3.5 h-3.5 text-[#d4af37] animate-spin-slow" />
+            <Compass className="w-3.5 h-3.5 text-[#d4af37]" />
             <span className="text-[10px] text-slate-500 font-mono font-bold tracking-wider uppercase">名匠联动捷径 RAIL</span>
           </div>
 
@@ -62,7 +61,7 @@ export default function InteractiveMap() {
                 onClick={() => {
                   setSelectedCityId(city.id);
                   if (selectedCityId !== city.id) {
-                    setSelectedBrand(null); // 切换城市时自动收起故事长卷
+                    setSelectedBrand(null);
                   }
                 }}
                 className={`flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all duration-300 border shrink-0 cursor-pointer ${
@@ -92,12 +91,11 @@ export default function InteractiveMap() {
           })}
         </div>
 
-        {/* 中间/主要部分：3D 地球仪 */}
+        {/* 中间：3D 地球仪 */}
         <div 
           className="flex-1 w-full max-w-[450px] md:max-w-[500px] aspect-square relative z-10 flex items-center justify-center order-1 lg:order-2" 
           id="globe-container-viewport"
         >
-          {/* 星球轨道环装饰 */}
           <div className="absolute w-[112%] h-[112%] border border-slate-900/15 rounded-full pointer-events-none" />
           <div className="absolute w-[95%] h-[95%] border border-slate-900/10 rounded-full pointer-events-none" />
           <div className="absolute w-[78%] h-[78%] border border-slate-900/5 rounded-full pointer-events-none" />
@@ -106,20 +104,19 @@ export default function InteractiveMap() {
             activeCityId={selectedCityId}
             onSelectCity={(cityId) => {
               setSelectedCityId(cityId);
-              setSelectedBrand(null); // 点击切换时清卷
+              setSelectedBrand(null);
             }}
             hoveredCityId={hoveredCityId}
             onHoverCity={(cityId) => setHoveredCityId(cityId)}
           />
 
-          {/* 右下角鼠标操作指引提示 */}
           <div className="absolute bottom-2 right-4 flex items-center gap-1.5 bg-slate-950/60 border border-slate-900/60 px-2.5 py-1 rounded-full pointer-events-none select-none text-[9px] text-slate-500 font-mono">
             <Globe2 className="w-3 h-3 text-[#d4af37]" />
             <span>DRAG ROTATE · HOVER PIN · CLICK CITY</span>
           </div>
         </div>
 
-        {/* 右边/抽屉：当点击城市时展示对应的名匠名坊列表 */}
+        {/* 右边：城市品牌详情侧板 */}
         <div 
           className="w-full lg:w-80 flex flex-col gap-4 shrink-0 order-3 z-20"
           id="map-detail-card-panel"
@@ -129,10 +126,8 @@ export default function InteractiveMap() {
               className="w-full bg-[#070b16]/95 border border-slate-800 backdrop-blur-xl rounded-xl shadow-2xl shadow-black/90 overflow-hidden flex flex-col transition-all duration-300 animate-in fade-in slide-in-from-bottom-5"
               id="brand-detail-sidebar"
             >
-              {/* 金彩流光 */}
               <div className="h-1 bg-gradient-to-r from-transparent via-[#d4af37] to-transparent" />
 
-              {/* 卡片头部 */}
               <div className="px-5 py-4 flex items-center justify-between border-b border-slate-900 bg-slate-950/20">
                 <div>
                   <span className="text-[9px] tracking-[0.25em] font-mono text-[#d4af37] uppercase font-bold block mb-0.5">
@@ -156,7 +151,6 @@ export default function InteractiveMap() {
                 </div>
               </div>
 
-              {/* 品牌列表区域 */}
               <div className="p-4 max-h-[320px] overflow-y-auto space-y-3 custom-scrollbar">
                 {selectedCity.brands.map((brand) => (
                   <div
@@ -191,7 +185,6 @@ export default function InteractiveMap() {
                 ))}
               </div>
 
-              {/* 特色底饰 */}
               <div className="px-5 py-3.5 bg-slate-950/75 border-t border-slate-900/80 flex items-center justify-between text-[10px] text-slate-500 font-sans">
                 <span className="flex items-center gap-1">
                   <Award className="w-3 h-3 text-[#d4af37]" />
@@ -200,7 +193,6 @@ export default function InteractiveMap() {
               </div>
             </div>
           ) : (
-            // 未选中城市的指引占位
             <div className="w-full bg-[#070b16]/30 border border-dashed border-slate-800/80 rounded-xl p-6 text-center flex flex-col items-center justify-center min-h-[160px] select-none">
               <div className="w-10 h-10 rounded-full bg-slate-950/60 border border-slate-900 flex items-center justify-center text-slate-500 mb-3">
                 <HelpCircle className="w-5 h-5" />
@@ -216,7 +208,7 @@ export default function InteractiveMap() {
         </div>
       </div>
 
-      {/* 4. 点击具体品牌时，展开一个尊贵精致的手工故事长图细节面板 */}
+      {/* 故事弹窗板 */}
       {selectedBrand && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in duration-300">
           <div 
@@ -224,13 +216,11 @@ export default function InteractiveMap() {
             onClick={(e) => e.stopPropagation()}
             id={`brand-story-modal-${selectedBrand.id}`}
           >
-            {/* 卡片大金顶 */}
             <div className="h-1 bg-gradient-to-r from-[#d4af37]/40 via-[#d4af37] to-[#d4af37]/40" />
 
-            {/* 顶栏 */}
             <div className="px-5 py-4 flex items-center justify-between border-b border-slate-900 bg-slate-950/30">
               <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-[#d4af37] animate-pulse" />
+                <Sparkles className="w-4 h-4 text-[#d4af37]" />
                 <span className="text-[11px] font-mono text-[#d4af37] font-bold tracking-[0.2em] uppercase">手工绝艺档案 MASTERPIECE</span>
               </div>
               <button
@@ -242,10 +232,7 @@ export default function InteractiveMap() {
               </button>
             </div>
 
-            {/* 内容区 */}
             <div className="flex-1 overflow-y-auto p-6 space-y-5 custom-scrollbar">
-              
-              {/* 品牌名称头 */}
               <div className="border-b border-slate-900/60 pb-4">
                 <div className="flex items-center gap-2 mb-1.5">
                   <span className="text-[10px] uppercase tracking-widest bg-[#d4af37]/10 border border-[#d4af37]/30 text-[#d4af37] px-2 py-0.5 rounded font-bold">
@@ -263,21 +250,18 @@ export default function InteractiveMap() {
                 </p>
               </div>
 
-              {/* 奢华质感小插图 */}
               <div className="relative h-44 rounded-lg overflow-hidden bg-slate-950 flex items-center justify-center p-4 border border-slate-900">
                 <div className="absolute inset-0 bg-radial-gradient from-transparent to-black/80 pointer-events-none z-10" />
                 <div className="scale-[2.4] opacity-90 relative z-0">
                   <CraftThumbnail type={selectedBrand.detailImage} />
                 </div>
                 
-                {/* 浮动饰纹 */}
                 <div className="absolute bottom-3 left-3 z-20 flex items-center gap-1.5 bg-[#03050a]/80 border border-slate-900/80 px-2 py-0.5 rounded font-mono text-[9px] text-[#d4af37]">
                   <Award className="w-3 h-3" />
                   <span>PRECISE CRAFT IN DETAIL</span>
                 </div>
               </div>
 
-              {/* 故事详情 */}
               <div className="space-y-4">
                 <div>
                   <h4 className="text-xs font-bold text-slate-400 tracking-wider mb-1.5 font-sans">
@@ -299,7 +283,6 @@ export default function InteractiveMap() {
               </div>
             </div>
 
-            {/* 底栏 */}
             <div className="px-6 py-4 bg-slate-950/60 border-t border-slate-900 flex items-center justify-between text-xs text-slate-400 font-sans">
               <span className="text-[10px] text-slate-500 font-mono">
                 BOATICUE · SELECT HERITAGE
