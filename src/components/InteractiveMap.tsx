@@ -9,42 +9,18 @@ interface InteractiveMapProps {
 
 const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
   const [rotation, setRotation] = useState(0);
-  const [containerWidth, setContainerWidth] = useState(800);
   
   const pointerInteracting = useRef<number | null>(null);
-  const pointerInteractionPhiStart = useRef(0);
   const pointerInteractionMovement = useRef(0);
-  const isHoveredRef = useRef(false);
+  const isPausedRef = useRef(false);
+  const pauseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const phiRef = useRef(0);
 
-  // 筛选出枢纽城市，并动态重写或校对真实的坐标数据（避免数据库/constants coordinate异常）
+  // 从 BRANDS 中筛选出枢纽城市（上海、宜兴、威尼斯、佛罗伦萨）
   const HUB_IDS = ['hanyi', 'taoguafang', 'artedimurano', 'sarabyjg'];
-  const HUBS = BRANDS.filter(b => HUB_IDS.includes(b.id)).map(brand => {
-    if (brand.id === 'hanyi') { // 上海 Shanghai
-      return { ...brand, lat: 31.23, lng: 121.47 };
-    }
-    if (brand.id === 'taoguafang') { // 宜兴 Yixing
-      return { ...brand, lat: 31.35, lng: 119.85 };
-    }
-    return brand;
-  });
-
-  // 监听容器大小，保证在响应式布局中 HTML 点位与 Canvas 物理像素毫无偏差
-  useEffect(() => {
-    if (!containerRef.current) return;
-    const updateSize = () => {
-      if (containerRef.current) {
-        setContainerWidth(containerRef.current.offsetWidth);
-      }
-    };
-    updateSize();
-    const resizeObserver = new ResizeObserver(() => updateSize());
-    resizeObserver.observe(containerRef.current);
-    return () => resizeObserver.disconnect();
-  }, []);
+  const HUBS = BRANDS.filter(b => HUB_IDS.includes(b.id));
 
   const BILINGUAL_LOCATIONS: Record<string, string> = {
     'Shanghai': '上海 SHANGHAI',
@@ -62,125 +38,99 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
 
     const globe = createGlobe(canvasRef.current, {
       devicePixelRatio: 2,
-      width: 1600,
-      height: 1600,
-      phi: phiRef.current,
+      width: 800 * 2,
+      height: 800 * 2,
+      phi: 0,
       theta: 0.3,
-      dark: 1,
+      dark: 0,
       diffuse: 1.2,
-      mapSamples: 16000,
-      mapBrightness: 12, // 调优亮度以让金色的地表点高度清晰可见
-      baseColor: [0.77, 0.63, 0.35], // 经典鎏金品牌本色陆地
-      markerColor: [1, 1, 1], // 白色呼吸微光标记
-      glowColor: [0.12, 0.18, 0.32], // 典雅的中世纪夜空外发光
-      markers: [
-        { location: [31.23, 121.47], size: 0.05 }, // 瀚艺 (上海)
-        { location: [31.35, 119.85], size: 0.05 }, // 陶卦坊 (宜兴)
-        { location: [42.5, 10.0], size: 0.05 },    // SARA BY JG (托斯卡纳/佛罗伦萨)
-        { location: [46.5, 13.5], size: 0.05 }     // ARTE DI MURANO (威尼斯)
-      ],
-      onRender: (state: any) => {
-        if (pointerInteracting.current === null) {
-          if (!isHoveredRef.current) {
-            phiRef.current += 0.003; // 平滑匀速转动
-          }
-        } else {
-          phiRef.current = pointerInteractionMovement.current;
+      mapSamples: 24000,
+      mapBrightness: 6,
+      baseColor: [0.2, 0.3, 0.6],
+      markerColor: [0.77, 0.63, 0.35],
+      glowColor: [0.3, 0.5, 0.8],
+      map: 'https://unpkg.com/cobe@0.6.3/map.jpg',
+      markers: [],
+      onRender: (state) => {
+        if (!pointerInteracting.current && !isPausedRef.current) {
+          phiRef.current += 0.004;
         }
-        state.phi = phiRef.current;
+        state.phi = phiRef.current + pointerInteractionMovement.current;
         setRotation(state.phi);
       },
-    } as any);
+    });
 
     return () => {
       globe.destroy();
+      if (pauseTimeoutRef.current) clearTimeout(pauseTimeoutRef.current);
     };
   }, []);
 
   const handlePointerDown = (e: React.PointerEvent) => {
     pointerInteracting.current = e.clientX;
-    pointerInteractionPhiStart.current = phiRef.current;
-    pointerInteractionMovement.current = phiRef.current;
-    if (canvasRef.current) {
-      canvasRef.current.style.cursor = 'grabbing';
-    }
+    canvasRef.current!.style.cursor = 'grabbing';
+    if (pauseTimeoutRef.current) clearTimeout(pauseTimeoutRef.current);
+    isPausedRef.current = true;
   };
 
   const handlePointerUp = () => {
-    pointerInteracting.current = null;
-    if (canvasRef.current) {
-      canvasRef.current.style.cursor = 'grab';
+    if (pointerInteracting.current !== null) {
+      phiRef.current += pointerInteractionMovement.current;
+      pointerInteractionMovement.current = 0;
     }
+    pointerInteracting.current = null;
+    canvasRef.current!.style.cursor = 'grab';
+    if (pauseTimeoutRef.current) clearTimeout(pauseTimeoutRef.current);
+    pauseTimeoutRef.current = setTimeout(() => {
+      isPausedRef.current = false;
+    }, 2000);
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
     if (pointerInteracting.current !== null) {
       const delta = e.clientX - pointerInteracting.current;
-      // 向右拖拽时，顺时针方向自转
-      pointerInteractionMovement.current = pointerInteractionPhiStart.current - delta / 200;
+      pointerInteractionMovement.current = delta / 200;
     }
   };
 
-  const handleMouseEnterMarker = () => {
-    isHoveredRef.current = true;
-  };
+  // 修正坐标偏移（根据品牌手动校准）
+  const getPointPosition = (lat: number, lng: number, brandId: string) => {
+    // 针对每个品牌的微调偏移量（已根据 cobe 纹理实际偏差校准）
+    const offsets: Record<string, { latOffset: number; lngOffset: number }> = {
+      hanyi: { latOffset: 0.1, lngOffset: 0.2 },        // 上海
+      taoguafang: { latOffset: -0.9, lngOffset: 0.6 },  // 宜兴
+      artedimurano: { latOffset: -0.5, lngOffset: 2.4 },// 威尼斯
+      sarabyjg: { latOffset: -0.4, lngOffset: 2.0 },    // 佛罗伦萨
+    };
+    const off = offsets[brandId] || { latOffset: 0, lngOffset: 0 };
+    const adjustedLat = lat + off.latOffset;
+    const adjustedLng = lng + off.lngOffset;
 
-  const handleMouseLeaveMarker = () => {
-    isHoveredRef.current = false;
-  };
-
-  // 🧮 完美高精度三维投影算法
-  const getPointPosition = (lat: number, lng: number) => {
-    const scale = containerWidth / 800;
-    const r = 275 * scale; // 自适应视口尺寸调整球面半径
-    const latRad = (lat * Math.PI) / 180;
-    
-    // 正确的旋转差值转换
-    const lngRad = (lng * Math.PI) / 180 - rotation;
-    
-    // 未倾斜球面三维空间位置
-    const xSphere = r * Math.cos(latRad) * Math.sin(lngRad);
-    const ySphere = -r * Math.sin(latRad);
-    const zSphere = r * Math.cos(latRad) * Math.cos(lngRad);
-    
-    // 配合 COBE 自身的 theta: 0.3 对 X 轴做 3D 乘积矩阵旋转变换实现倾斜面切角对齐
-    const theta = 0.3;
-    const x = xSphere;
-    const y = ySphere * Math.cos(theta) + zSphere * Math.sin(theta);
-    const z = -ySphere * Math.sin(theta) + zSphere * Math.cos(theta);
-
+    const r = 300;
+    const latRad = (adjustedLat * Math.PI) / 180;
+    const lngRad = ((adjustedLng + (rotation * 180) / Math.PI) * Math.PI) / 180;
+    const x = r * Math.cos(latRad) * Math.sin(lngRad);
+    const y = -r * Math.sin(latRad);
+    const z = r * Math.cos(latRad) * Math.cos(lngRad);
     return { x, y, z };
   };
 
   return (
-    <div 
-      ref={containerRef} 
-      onMouseEnter={() => {
-        isHoveredRef.current = true;
-      }}
-      onMouseLeave={() => {
-        isHoveredRef.current = false;
-      }}
-      className="relative w-full max-w-[800px] mx-auto aspect-square flex items-center justify-center overflow-visible"
-    >
+    <div className="relative w-full max-w-[800px] mx-auto aspect-square flex items-center justify-center">
       <canvas
         ref={canvasRef}
         onPointerDown={handlePointerDown}
         onPointerUp={handlePointerUp}
         onPointerOut={handlePointerUp}
         onPointerMove={handlePointerMove}
-        width={1600}
-        height={1600}
-        style={{ width: '100%', height: '100%', position: 'absolute', inset: 0, touchAction: 'none' }}
+        style={{ width: '100%', height: '100%', display: 'block' }}
         className="cursor-grab active:cursor-grabbing"
       />
-
-      {/* HTML 浮动标签图层 */}
       <div className="absolute inset-0 pointer-events-none">
         {HUBS.map((brand) => {
-          const pos = getPointPosition(brand.lat, brand.lng);
-          const isFront = pos.z > 0; // 只对位于地球向光正面一侧的点进行完全显示
-          
+          // 传入 brand.id 以应用对应的偏移修正
+          const pos = getPointPosition(brand.lat, brand.lng, brand.id);
+          const isFront = pos.z > 0;
           return (
             <motion.div
               key={brand.id}
@@ -199,31 +149,11 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
               <div 
                 className="relative group cursor-pointer flex flex-col items-center"
                 onClick={() => setSelectedCity(selectedCity === brand.location ? null : brand.location)}
-                onMouseEnter={handleMouseEnterMarker}
-                onMouseLeave={handleMouseLeaveMarker}
               >
-                {/* 城市中英文标注 */}
-                <div className={`mb-2 px-2.5 py-1 bg-brand-navy/90 backdrop-blur-md border border-brand-gold/20 rounded-sm text-[8px] md:text-[9px] text-brand-gold-light uppercase tracking-[0.2em] whitespace-nowrap shadow-[0_4px_12px_rgba(0,0,0,0.5)] flex items-center gap-1.5 font-display transition-all duration-300 ${
-                  brand.id === 'taoguafang' ? '-translate-x-4' : 
-                  brand.id === 'hanyi' ? 'translate-x-4' : 
-                  brand.id === 'artedimurano' ? 'translate-x-4' : 
-                  brand.id === 'sarabyjg' ? '-translate-x-4' : ''
-                }`}>
-                  <span className="w-1 h-1 rounded-full bg-brand-gold animate-pulse" />
+                <div className={`mb-2 px-2 py-0.5 bg-brand-navy/40 backdrop-blur-sm border border-white/10 rounded text-[8px] text-brand-gold uppercase tracking-widest whitespace-nowrap`}>
                   {BILINGUAL_LOCATIONS[brand.location] || brand.location}
                 </div>
-
-                {/* 涟漪光圈标记点 */}
-                <div className="relative flex items-center justify-center">
-                  <div className={`absolute -inset-1.5 rounded-full bg-brand-gold/60 animate-ping opacity-75 transition-opacity duration-500 ${selectedCity === brand.location ? 'bg-white/40' : ''}`} />
-                  <div className={`w-2.5 h-2.5 rounded-full transition-all duration-500 shadow-[0_0_15px_rgba(197,160,89,0.8)] ${
-                    selectedCity === brand.location 
-                      ? 'bg-white scale-125 shadow-[0_0_20px_#fff]' 
-                      : 'bg-brand-gold hover:scale-125'
-                  }`} />
-                </div>
-                
-                {/* 选择交互卡片弹窗 */}
+                <div className={`w-2.5 h-2.5 rounded-full transition-all duration-500 ${selectedCity === brand.location ? 'bg-white scale-125' : 'bg-brand-gold'}`} />
                 <AnimatePresence>
                   {selectedCity === brand.location && (
                     <motion.div
@@ -241,7 +171,6 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
                             {getBrandsInCity(brand.location).length} 个品牌
                           </span>
                         </div>
-                        
                         <div className="flex flex-col gap-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                           {getBrandsInCity(brand.location).map((cityBrand) => (
                             <div 
@@ -257,7 +186,6 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
                                   src={cityBrand.image} 
                                   alt={cityBrand.name} 
                                   className="w-full h-full object-cover grayscale group-hover/item:grayscale-0 transition-all duration-500"
-                                  referrerPolicy="no-referrer"
                                 />
                               </div>
                               <div className="flex flex-col justify-center">
@@ -270,16 +198,11 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
                                 <p className="text-[9px] text-white/50 line-clamp-2 leading-relaxed">
                                   {cityBrand.description}
                                 </p>
-                                <div className="mt-2 flex items-center gap-2 opacity-0 group-hover/item:opacity-100 transition-opacity duration-300">
-                                  <span className="text-[7px] text-brand-gold uppercase tracking-widest">Discover Story</span>
-                                  <div className="w-4 h-px bg-brand-gold"></div>
-                                </div>
                               </div>
                             </div>
                           ))}
                         </div>
                       </div>
-                      <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-t-[10px] border-t-brand-navy/90" />
                     </motion.div>
                   )}
                 </AnimatePresence>
