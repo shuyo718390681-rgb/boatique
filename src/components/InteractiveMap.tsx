@@ -92,10 +92,21 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
     }
   };
 
-  const getPointPosition = (lat: number, lng: number) => {
+  // 最终偏移量（根据测试2的写死效果，结合实际偏差手动校准）
+  const getPointPosition = (lat: number, lng: number, brandId: string) => {
+    const offsets: Record<string, { latOffset: number; lngOffset: number }> = {
+      HANART: { latOffset: -2.5, lngOffset: -2.0 },   // 上海：向西南移动
+      taoguafang: { latOffset: -3.5, lngOffset: -1.5 }, // 宜兴：向南稍向西
+      artedimurano: { latOffset: -0.5, lngOffset: 2.4 },
+      sarabyjg: { latOffset: -0.4, lngOffset: 2.0 },
+    };
+    const off = offsets[brandId] || { latOffset: 0, lngOffset: 0 };
+    const adjustedLat = lat + off.latOffset;
+    const adjustedLng = lng + off.lngOffset;
+
     const r = 300;
-    const latRad = (lat * Math.PI) / 180;
-    const lngRad = ((lng + (rotation * 180) / Math.PI) * Math.PI) / 180;
+    const latRad = (adjustedLat * Math.PI) / 180;
+    const lngRad = ((adjustedLng + (rotation * 180) / Math.PI) * Math.PI) / 180;
     const x = r * Math.cos(latRad) * Math.sin(lngRad);
     const y = -r * Math.sin(latRad);
     const z = r * Math.cos(latRad) * Math.cos(lngRad);
@@ -115,7 +126,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
       />
       <div className="absolute inset-0 pointer-events-none">
         {HUBS.map((brand) => {
-          const pos = getPointPosition(brand.lat, brand.lng);
+          const pos = getPointPosition(brand.lat, brand.lng, brand.id);
           const isFront = pos.z > 0;
           return (
             <motion.div
