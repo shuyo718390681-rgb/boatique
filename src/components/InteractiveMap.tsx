@@ -18,7 +18,6 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
   const pauseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const phiRef = useRef(0);
 
-  // 枢纽城市 ID（注意瀚艺 id 已改为 'HANART'）
   const HUB_IDS = ['HANART', 'taoguafang', 'artedimurano', 'sarabyjg'];
   const HUBS = BRANDS.filter(b => HUB_IDS.includes(b.id));
 
@@ -93,13 +92,13 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
     }
   };
 
-  // 动态偏移（根据品牌校准，已大幅增加偏移量使标记点落到真实位置）
   const getPointPosition = (lat: number, lng: number, brandId: string) => {
+    // 极端偏移测试值（让标记点明显移动）
     const offsets: Record<string, { latOffset: number; lngOffset: number }> = {
-      HANART: { latOffset: -2.8, lngOffset: -2.5 },     // 上海：向西南大幅度移动
-      taoguafang: { latOffset: -4.2, lngOffset: -1.0 }, // 宜兴：向南、稍向西
-      artedimurano: { latOffset: -0.5, lngOffset: 2.4 }, // 威尼斯（保持）
-      sarabyjg: { latOffset: -0.4, lngOffset: 2.0 },     // 佛罗伦萨（保持）
+      HANART: { latOffset: -12, lngOffset: -15 },     // 上海：大幅向西南
+      taoguafang: { latOffset: -14, lngOffset: -10 }, // 宜兴：大幅向南
+      artedimurano: { latOffset: -0.5, lngOffset: 2.4 },
+      sarabyjg: { latOffset: -0.4, lngOffset: 2.0 },
     };
     const off = offsets[brandId] || { latOffset: 0, lngOffset: 0 };
     const adjustedLat = lat + off.latOffset;
