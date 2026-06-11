@@ -59,7 +59,7 @@ export interface Product {
 
 export const BRANDS: Brand[] = [
   {
-    id: 'HANART',   // 已改为 HANART
+    id: 'HANART',
     name: '瀚艺HANART 旗袍',
     nameEn: 'HANART Qipao',
     displayName: '瀚艺HANART\n旗袍/男装',
@@ -78,8 +78,8 @@ export const BRANDS: Brand[] = [
     categoryEn: 'Apparel',
     objectPosition: 'left',
     location: 'Shanghai',
-    lat: 30.6,      // 修正：向南移动
-    lng: 121.0,     // 修正：向西移动
+    lat: 23.5,      // 大幅向南移动（原30.6 → 23.5）
+    lng: 113.0,     // 大幅向西移动（原121.0 → 113.0）
     story: `
 瀚艺HANART，非遗传承中国皇家工艺，精于手绣、手绘与手工缝制。见证上海摩登风华，承载梅兰芳、周璇、宋氏三姐妹等名流传奇与影艺经典。承袭数代传奇匠人衣钵，如旗袍泰斗褚宏生先生。瀚艺秉持“上海裁缝”的品味与工匠精神。让中国极致皇家工艺以“中国审美”走向世界。
 
@@ -172,8 +172,8 @@ New Chinese-style suits, Zhongshan suits, and jackets—all handmade with signat
     category: '茶具',
     categoryEn: 'Teaware',
     location: 'Yixing',
-    lat: 30.0,      // 修正：向南大幅移动
-    lng: 119.9,     // 修正：微调经度
+    lat: 21.0,      // 大幅向南移动（原30.0 → 21.0）
+    lng: 111.0,     // 大幅向西移动（原119.9 → 111.0）
     story: `
 徐门紫砂的传承已跨越百年。自清道光年间起，徐家便以紫砂为业，作品远销亚洲，规模甚大。其中，承前启后的关键人物是中国工艺美术大师徐汉棠。他于上世纪五十年代初拜壶艺泰斗顾景舟为师，是其第一个入室大弟子，艺术功力深厚，所创作品样式之广被誉为“无人能企及”。其作品如《十五头嵌银丝咖啡具》等被中国故宫博物院、英国维多利亚博物馆等国内外权威机构收藏，并荣获 “中国工艺美术终身成就奖” 等至高荣誉，为徐门技艺奠定了宗师级的典范。
 
@@ -202,8 +202,8 @@ Today, fifth‑generation successor Xu Guang carries this heritage forward. He b
     category: '皮具',
     categoryEn: 'Leather Goods',
     location: 'Florence',
-    lat: 43.4,      // 修正：向南移动
-    lng: 11.4,      // 修正：向东移动
+    lat: 43.4,
+    lng: 11.4,
     story: `
 SARA BY JG源自皮具手工艺的故乡。在这快节奏的时代，它选择与时间为盟，恪守着佛罗伦萨最纯粹的“意大利制造”标准。
 品牌甄选托斯卡纳的顶级植鞣革，让皮革拥有“会呼吸的生命力”。
@@ -257,8 +257,8 @@ Rooted in Florence, Studio Flo oversees every step of production Locally-from ma
     category: '水晶',
     categoryEn: 'Crystal',
     location: 'Venice',
-    lat: 45.0,      // 修正：向南移动
-    lng: 12.6,      // 修正：向东移动
+    lat: 45.0,
+    lng: 12.6,
     story: `
 在威尼斯潟湖上有那么一座传奇的玻璃岛——穆拉诺。
 自1291年起，这里跳动的窑火便如脉搏般从未停息，ARTE DI MURANO 正是这千年艺术之火的虔诚守护者。
