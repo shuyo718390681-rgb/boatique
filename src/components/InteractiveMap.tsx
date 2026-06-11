@@ -93,10 +93,10 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
   };
 
   const getPointPosition = (lat: number, lng: number, brandId: string) => {
-    // 极端偏移测试值（让标记点明显移动）
+    // 经过测试，大幅度偏移后标记点移动了，现在逐步减小到合理范围
     const offsets: Record<string, { latOffset: number; lngOffset: number }> = {
-      HANART: { latOffset: -12, lngOffset: -15 },     // 上海：大幅向西南
-      taoguafang: { latOffset: -14, lngOffset: -10 }, // 宜兴：大幅向南
+      HANART: { latOffset: -2.8, lngOffset: -2.5 },     // 上海：向西南移动约2.5-2.8度
+      taoguafang: { latOffset: -4.2, lngOffset: -1.0 }, // 宜兴：向南移动4.2度，稍向西
       artedimurano: { latOffset: -0.5, lngOffset: 2.4 },
       sarabyjg: { latOffset: -0.4, lngOffset: 2.0 },
     };
