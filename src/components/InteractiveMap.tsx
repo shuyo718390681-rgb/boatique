@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+、import React, { useEffect, useRef, useState } from 'react';
 import createGlobe from 'cobe';
 import { motion, AnimatePresence } from 'motion/react';
 import { BRANDS, Brand } from '../constants';
@@ -92,11 +92,11 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
     }
   };
 
+  // 中等偏移量（标记点应落在真实城市附近）
   const getPointPosition = (lat: number, lng: number, brandId: string) => {
-    // 经过测试，大幅度偏移后标记点移动了，现在逐步减小到合理范围
     const offsets: Record<string, { latOffset: number; lngOffset: number }> = {
-      HANART: { latOffset: -2.8, lngOffset: -2.5 },     // 上海：向西南移动约2.5-2.8度
-      taoguafang: { latOffset: -4.2, lngOffset: -1.0 }, // 宜兴：向南移动4.2度，稍向西
+      HANART: { latOffset: -4.0, lngOffset: -3.5 },     // 上海
+      taoguafang: { latOffset: -5.5, lngOffset: -1.5 }, // 宜兴
       artedimurano: { latOffset: -0.5, lngOffset: 2.4 },
       sarabyjg: { latOffset: -0.4, lngOffset: 2.0 },
     };
