@@ -7,6 +7,13 @@ interface InteractiveMapProps {
   onBrandClick?: (brandId: string) => void;
 }
 
+const OFFSETS: Record<string, { latOffset: number; lngOffset: number }> = {
+  HANART: { latOffset: -6, lngOffset: -9 },
+  taoguafang: { latOffset: -8, lngOffset: -8 },
+  artedimurano: { latOffset: -0.5, lngOffset: 2.4 },
+  sarabyjg: { latOffset: -0.4, lngOffset: 2.0 },
+};
+
 const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
@@ -92,15 +99,8 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
     }
   };
 
-  // 大幅偏移：让上海和宜兴跳到中国中部（湖南、广西一带）
   const getPointPosition = (lat: number, lng: number, brandId: string) => {
-    const offsets: Record<string, { latOffset: number; lngOffset: number }> = {
-      HANART: { latOffset: -6, lngOffset: -9 },     // 上海 → 约 25°N, 112°E（湖南）
-      taoguafang: { latOffset: -8, lngOffset: -8 }, // 宜兴 → 约 23°N, 111°E（广西）
-      artedimurano: { latOffset: -0.5, lngOffset: 2.4 },
-      sarabyjg: { latOffset: -0.4, lngOffset: 2.0 },
-    };
-    const off = offsets[brandId] || { latOffset: 0, lngOffset: 0 };
+    const off = OFFSETS[brandId] || { latOffset: 0, lngOffset: 0 };
     const adjustedLat = lat + off.latOffset;
     const adjustedLng = lng + off.lngOffset;
 
