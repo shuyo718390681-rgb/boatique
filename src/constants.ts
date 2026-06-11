@@ -172,8 +172,8 @@ New Chinese-style suits, Zhongshan suits, and jackets—all handmade with signat
     category: '茶具',
     categoryEn: 'Teaware',
     location: 'Yixing',
-    lat: 33.5,
-    lng: 118.0,
+    lat: 31.36,
+    lng: 119.82,
     story: `
 徐门紫砂的传承已跨越百年。自清道光年间起，徐家便以紫砂为业，作品远销亚洲，规模甚大。其中，承前启后的关键人物是中国工艺美术大师徐汉棠。他于上世纪五十年代初拜壶艺泰斗顾景舟为师，是其第一个入室大弟子，艺术功力深厚，所创作品样式之广被誉为“无人能企及”。其作品如《十五头嵌银丝咖啡具》等被中国故宫博物院、英国维多利亚博物馆等国内外权威机构收藏，并荣获 “中国工艺美术终身成就奖” 等至高荣誉，为徐门技艺奠定了宗师级的典范。
 
@@ -202,8 +202,8 @@ Today, fifth‑generation successor Xu Guang carries this heritage forward. He b
     category: '皮具',
     categoryEn: 'Leather Goods',
     location: 'Florence',
-    lat: 42.5,
-    lng: 10.0,
+    lat: 43.77,
+    lng: 11.25,
     story: `
 SARA BY JG源自皮具手工艺的故乡。在这快节奏的时代，它选择与时间为盟，恪守着佛罗伦萨最纯粹的“意大利制造”标准。
 品牌甄选托斯卡纳的顶级植鞣革，让皮革拥有“会呼吸的生命力”。
@@ -257,8 +257,8 @@ Rooted in Florence, Studio Flo oversees every step of production Locally-from ma
     category: '水晶',
     categoryEn: 'Crystal',
     location: 'Venice',
-    lat: 46.5,
-    lng: 13.5,
+    lat: 45.44,
+    lng: 12.34,
     story: `
 在威尼斯潟湖上有那么一座传奇的玻璃岛——穆拉诺。
 自1291年起，这里跳动的窑火便如脉搏般从未停息，ARTE DI MURANO 正是这千年艺术之火的虔诚守护者。
@@ -427,7 +427,6 @@ export const EVENTS: Event[] = [
     type: '抽奖',
     typeEn: 'Lucky Draw'
   }
-
 ];
 
 export const PRODUCTS: Product[] = [
