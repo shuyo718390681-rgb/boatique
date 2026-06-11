@@ -8,8 +8,8 @@ interface InteractiveMapProps {
 }
 
 const OFFSETS: Record<string, { latOffset: number; lngOffset: number }> = {
-  HANART: { latOffset: -6, lngOffset: -9 },
-  taoguafang: { latOffset: -8, lngOffset: -8 },
+  HANART: { latOffset: -2.8, lngOffset: -2.2 },
+  taoguafang: { latOffset: -3.8, lngOffset: -1.5 },
   artedimurano: { latOffset: -0.5, lngOffset: 2.4 },
   sarabyjg: { latOffset: -0.4, lngOffset: 2.0 },
 };
