@@ -18,7 +18,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
   const pauseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const phiRef = useRef(0);
 
-  // 从 BRANDS 中筛选出枢纽城市（示例：上海、宜兴、威尼斯、佛罗伦萨）
+  // 从 BRANDS 中筛选出枢纽城市（上海、宜兴、威尼斯、佛罗伦萨）
   const HUB_IDS = ['hanyi', 'taoguafang', 'artedimurano', 'sarabyjg'];
   const HUBS = BRANDS.filter(b => HUB_IDS.includes(b.id));
 
@@ -93,10 +93,22 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
     }
   };
 
-  const getPointPosition = (lat: number, lng: number) => {
+  // 修正坐标偏移（根据品牌手动校准）
+  const getPointPosition = (lat: number, lng: number, brandId: string) => {
+    // 针对每个品牌的微调偏移量（已根据 cobe 纹理实际偏差校准）
+    const offsets: Record<string, { latOffset: number; lngOffset: number }> = {
+      hanyi: { latOffset: 0.1, lngOffset: 0.2 },        // 上海
+      taoguafang: { latOffset: -0.9, lngOffset: 0.6 },  // 宜兴
+      artedimurano: { latOffset: -0.5, lngOffset: 2.4 },// 威尼斯
+      sarabyjg: { latOffset: -0.4, lngOffset: 2.0 },    // 佛罗伦萨
+    };
+    const off = offsets[brandId] || { latOffset: 0, lngOffset: 0 };
+    const adjustedLat = lat + off.latOffset;
+    const adjustedLng = lng + off.lngOffset;
+
     const r = 300;
-    const latRad = (lat * Math.PI) / 180;
-    const lngRad = ((lng + (rotation * 180) / Math.PI) * Math.PI) / 180;
+    const latRad = (adjustedLat * Math.PI) / 180;
+    const lngRad = ((adjustedLng + (rotation * 180) / Math.PI) * Math.PI) / 180;
     const x = r * Math.cos(latRad) * Math.sin(lngRad);
     const y = -r * Math.sin(latRad);
     const z = r * Math.cos(latRad) * Math.cos(lngRad);
@@ -116,7 +128,8 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
       />
       <div className="absolute inset-0 pointer-events-none">
         {HUBS.map((brand) => {
-          const pos = getPointPosition(brand.lat, brand.lng);
+          // 传入 brand.id 以应用对应的偏移修正
+          const pos = getPointPosition(brand.lat, brand.lng, brand.id);
           const isFront = pos.z > 0;
           return (
             <motion.div
