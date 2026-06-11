@@ -7,9 +7,10 @@ interface InteractiveMapProps {
   onBrandClick?: (brandId: string) => void;
 }
 
-const OFFSETS: Record<string, { latOffset: number; lngOffset: number }> = {
-  HANART: { latOffset: -2.8, lngOffset: -2.2 },
-  taoguafang: { latOffset: -3.8, lngOffset: -1.5 },
+// 极端偏移测试：让上海和宜兴跳到极远处
+const EXTREME_OFFSETS: Record<string, { latOffset: number; lngOffset: number }> = {
+  HANART: { latOffset: -20, lngOffset: -30 },
+  taoguafang: { latOffset: -25, lngOffset: -28 },
   artedimurano: { latOffset: -0.5, lngOffset: 2.4 },
   sarabyjg: { latOffset: -0.4, lngOffset: 2.0 },
 };
@@ -100,7 +101,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
   };
 
   const getPointPosition = (lat: number, lng: number, brandId: string) => {
-    const off = OFFSETS[brandId] || { latOffset: 0, lngOffset: 0 };
+    const off = EXTREME_OFFSETS[brandId] || { latOffset: 0, lngOffset: 0 };
     const adjustedLat = lat + off.latOffset;
     const adjustedLng = lng + off.lngOffset;
 
