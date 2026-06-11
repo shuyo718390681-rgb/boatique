@@ -92,11 +92,11 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
     }
   };
 
-  // 最终偏移量（根据测试2的写死效果，结合实际偏差手动校准）
+  // 大幅偏移：让上海和宜兴跳到中国中部（湖南、广西一带）
   const getPointPosition = (lat: number, lng: number, brandId: string) => {
     const offsets: Record<string, { latOffset: number; lngOffset: number }> = {
-      HANART: { latOffset: -2.5, lngOffset: -2.0 },   // 上海：向西南移动
-      taoguafang: { latOffset: -3.5, lngOffset: -1.5 }, // 宜兴：向南稍向西
+      HANART: { latOffset: -6, lngOffset: -9 },     // 上海 → 约 25°N, 112°E（湖南）
+      taoguafang: { latOffset: -8, lngOffset: -8 }, // 宜兴 → 约 23°N, 111°E（广西）
       artedimurano: { latOffset: -0.5, lngOffset: 2.4 },
       sarabyjg: { latOffset: -0.4, lngOffset: 2.0 },
     };
