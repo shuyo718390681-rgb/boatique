@@ -19,7 +19,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
   const phiRef = useRef(0);
 
   // 从 BRANDS 中筛选出枢纽城市（上海、宜兴、威尼斯、佛罗伦萨）
-  const HUB_IDS = ['hanyi', 'taoguafang', 'artedimurano', 'sarabyjg'];
+  const HUB_IDS = ['HANART', 'taoguafang', 'artedimurano', 'sarabyjg'];
   const HUBS = BRANDS.filter(b => HUB_IDS.includes(b.id));
 
   const BILINGUAL_LOCATIONS: Record<string, string> = {
