@@ -18,7 +18,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
   const pauseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const phiRef = useRef(0);
 
-  // 从 BRANDS 中筛选出枢纽城市（上海、宜兴、威尼斯、佛罗伦萨）
+  // ✅ 关键修复：将 'hanyi' 改为 'HANART'
   const HUB_IDS = ['HANART', 'taoguafang', 'artedimurano', 'sarabyjg'];
   const HUBS = BRANDS.filter(b => HUB_IDS.includes(b.id));
 
@@ -93,13 +93,13 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
     }
   };
 
-  // 修正坐标偏移（根据品牌手动校准，已按需求调整上海和宜兴位置）
+  // 修正坐标偏移（根据品牌手动校准，id 已同步）
   const getPointPosition = (lat: number, lng: number, brandId: string) => {
     const offsets: Record<string, { latOffset: number; lngOffset: number }> = {
-      hanyi: { latOffset: -0.6, lngOffset: -0.3 },     // 上海（向南0.6度，向西0.3度）
-      taoguafang: { latOffset: -1.8, lngOffset: 0.0 }, // 宜兴（向南1.8度，经度不变）
-      artedimurano: { latOffset: -0.5, lngOffset: 2.4 }, // 威尼斯
-      sarabyjg: { latOffset: -0.4, lngOffset: 2.0 },     // 佛罗伦萨
+      HANART: { latOffset: -0.6, lngOffset: -0.3 },     // 上海（向南0.6，向西0.3）
+      taoguafang: { latOffset: -1.8, lngOffset: 0.0 },  // 宜兴（向南1.8）
+      artedimurano: { latOffset: -0.5, lngOffset: 2.4 },// 威尼斯
+      sarabyjg: { latOffset: -0.4, lngOffset: 2.0 },    // 佛罗伦萨
     };
     const off = offsets[brandId] || { latOffset: 0, lngOffset: 0 };
     const adjustedLat = lat + off.latOffset;
