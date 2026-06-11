@@ -93,14 +93,13 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
     }
   };
 
-  // 修正坐标偏移（根据品牌手动校准）
+  // 修正坐标偏移（根据品牌手动校准，已按需求调整上海和宜兴位置）
   const getPointPosition = (lat: number, lng: number, brandId: string) => {
-    // 针对每个品牌的微调偏移量（已根据 cobe 纹理实际偏差校准）
     const offsets: Record<string, { latOffset: number; lngOffset: number }> = {
-      hanyi: { latOffset: 0.1, lngOffset: 0.2 },        // 上海
-      taoguafang: { latOffset: -0.9, lngOffset: 0.6 },  // 宜兴
-      artedimurano: { latOffset: -0.5, lngOffset: 2.4 },// 威尼斯
-      sarabyjg: { latOffset: -0.4, lngOffset: 2.0 },    // 佛罗伦萨
+      hanyi: { latOffset: -0.6, lngOffset: -0.3 },     // 上海（向南0.6度，向西0.3度）
+      taoguafang: { latOffset: -1.8, lngOffset: 0.0 }, // 宜兴（向南1.8度，经度不变）
+      artedimurano: { latOffset: -0.5, lngOffset: 2.4 }, // 威尼斯
+      sarabyjg: { latOffset: -0.4, lngOffset: 2.0 },     // 佛罗伦萨
     };
     const off = offsets[brandId] || { latOffset: 0, lngOffset: 0 };
     const adjustedLat = lat + off.latOffset;
@@ -128,7 +127,6 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
       />
       <div className="absolute inset-0 pointer-events-none">
         {HUBS.map((brand) => {
-          // 传入 brand.id 以应用对应的偏移修正
           const pos = getPointPosition(brand.lat, brand.lng, brand.id);
           const isFront = pos.z > 0;
           return (
