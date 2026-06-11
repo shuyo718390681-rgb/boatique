@@ -18,8 +18,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
   const pauseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const phiRef = useRef(0);
 
-  // 从 BRANDS 中筛选出枢纽城市（上海、宜兴、威尼斯、佛罗伦萨）
-  // 注意：瀚艺的 id 已经改为 'HANART'
+  // 枢纽城市 ID（注意瀚艺 id 已改为 'HANART'）
   const HUB_IDS = ['HANART', 'taoguafang', 'artedimurano', 'sarabyjg'];
   const HUBS = BRANDS.filter(b => HUB_IDS.includes(b.id));
 
@@ -94,17 +93,21 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
     }
   };
 
-  // 【测试2】强制写死屏幕坐标，用于验证标记点是否能够被移动
+  // 动态偏移（根据品牌校准，已大幅增加偏移量使标记点落到真实位置）
   const getPointPosition = (lat: number, lng: number, brandId: string) => {
-    // 上海（HANART）固定在画布左上角（相对于画布中心 -250, -200）
-    if (brandId === 'HANART') return { x: -250, y: -200, z: 1 };
-    // 宜兴固定在画布右下角
-    if (brandId === 'taoguafang') return { x: 200, y: 180, z: 1 };
-    
-    // 其他城市（威尼斯、佛罗伦萨）保持正常经纬度转换（以便对比）
+    const offsets: Record<string, { latOffset: number; lngOffset: number }> = {
+      HANART: { latOffset: -2.8, lngOffset: -2.5 },     // 上海：向西南大幅度移动
+      taoguafang: { latOffset: -4.2, lngOffset: -1.0 }, // 宜兴：向南、稍向西
+      artedimurano: { latOffset: -0.5, lngOffset: 2.4 }, // 威尼斯（保持）
+      sarabyjg: { latOffset: -0.4, lngOffset: 2.0 },     // 佛罗伦萨（保持）
+    };
+    const off = offsets[brandId] || { latOffset: 0, lngOffset: 0 };
+    const adjustedLat = lat + off.latOffset;
+    const adjustedLng = lng + off.lngOffset;
+
     const r = 300;
-    const latRad = (lat * Math.PI) / 180;
-    const lngRad = ((lng + (rotation * 180) / Math.PI) * Math.PI) / 180;
+    const latRad = (adjustedLat * Math.PI) / 180;
+    const lngRad = ((adjustedLng + (rotation * 180) / Math.PI) * Math.PI) / 180;
     const x = r * Math.cos(latRad) * Math.sin(lngRad);
     const y = -r * Math.sin(latRad);
     const z = r * Math.cos(latRad) * Math.cos(lngRad);
