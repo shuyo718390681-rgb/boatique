@@ -9,7 +9,7 @@ interface InteractiveMapProps {
 
 // 极端偏移测试：让上海和宜兴跳到极远处
 const EXTREME_OFFSETS: Record<string, { latOffset: number; lngOffset: number }> = {
-  HANART: { latOffset: -18, lngOffset: 87 },
+  HANART: { latOffset: -16, lngOffset: 87 },
   taoguafang: { latOffset: -25, lngOffset: -28 },
   artedimurano: { latOffset: -0.5, lngOffset: 2.4 },
   sarabyjg: { latOffset: -0.4, lngOffset: 2.0 },
