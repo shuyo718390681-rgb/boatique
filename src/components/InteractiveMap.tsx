@@ -11,8 +11,8 @@ interface InteractiveMapProps {
 const EXTREME_OFFSETS: Record<string, { latOffset: number; lngOffset: number }> = {
   HANART: { latOffset: -12, lngOffset: 90 },
   taoguafang: { latOffset: -11, lngOffset: 86 },
-  artedimurano: { latOffset: -13, lngOffset: 92 },
-  sarabyjg: { latOffset: -0.4, lngOffset: 2.0 },
+  artedimurano: { latOffset: -12, lngOffset: 92 },
+  sarabyjg: { latOffset: -9, lngOffset: 90 },
 };
 
 const InteractiveMap: React.FC<InteractiveMapProps> = ({ onBrandClick }) => {
