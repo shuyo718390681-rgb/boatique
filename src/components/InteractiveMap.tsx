@@ -11,7 +11,7 @@ interface InteractiveMapProps {
 const EXTREME_OFFSETS: Record<string, { latOffset: number; lngOffset: number }> = {
   HANART: { latOffset: -12, lngOffset: 90 },
   taoguafang: { latOffset: -11, lngOffset: 86 },
-  artedimurano: { latOffset: -0.5, lngOffset: 80 },
+  artedimurano: { latOffset: -8, lngOffset: 88 },
   sarabyjg: { latOffset: -0.4, lngOffset: 2.0 },
 };
 
